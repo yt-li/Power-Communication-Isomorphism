@@ -24,15 +24,17 @@ close all
 
 %% Select data
 % Hybrid SG-IBR system
-% UserData = 'ExamplePowerSystem_v3.xlsx';    	% SG + IBR
+% UserData = 'ExamplePowerSystem_v3.xlsx';    	% SG + SG + IBR
 % UserData = 'ExamplePowerSystem_v3_1.xlsx';    % SG + IBR + floating bus
 % UserData = 'ExamplePowerSystem_v3_2.xlsx';  	% SG + floating bus
 % UserData = 'ExamplePowerSystem_v3_3.xlsx';   	% One SG + One IBR + No load
 % UserData = 'ExamplePowerSystem_v3_4.xlsx';  	% One SG + One IBR
+% UserData = 'ExamplePowerSystem_v3_5.xlsx';    % SG + SG + IBR, + no SG inductor
+UserData = 'ExamplePowerSystem_v3_6.xlsx';    	% IBR + Load
 
 % Nature example
 % UserData = 'Nature_NETS_NYPS_68Bus_original';
-UserData = 'Nature_NETS_NYPS_68Bus_IBR';
+% UserData = 'Nature_NETS_NYPS_68Bus_IBR';
 
 %% Load data
 fprintf('Loading data...\n')
@@ -197,6 +199,9 @@ end
 % =============================
 % Add voltage node
 % =============================
+if n_Ibus_1st == 1
+    fprintf('Warning: The system has no voltage node.')
+else
 fprintf('Adding voltage node...\n')
 
 for i = 1:(n_Ibus_1st-1)
@@ -253,6 +258,8 @@ end
 %         Ybus_(i,i) = Ybus_(i,i) + Y_sg_{i};
 %     end
 % end
+
+end
 
 % =============================
 % Add current node
@@ -432,6 +439,8 @@ Hinv = eye(N_Bus);      % Let Hinv be identity matrix initially
 n_i_ref = n_Ibus_1st;        % Select the first current node as the reference
 n_v_ref = 1;               % Select the first voltage node as the reference
 
+% Check if the system has voltage node
+if n_Ibus_1st ~= 1
 % Symbolic transfer function form:
 % omega = 1/(D + J*s) * W;
 for i = 1:(n_Ibus_1st-1)
@@ -463,7 +472,9 @@ T_V_ss = ss(Av,Bv,Cv,Dv);
 % Auto conversion of state space
 % T_V_ss = [SimplexPS.sym2ss(T_V);
 %           SimplexPS.sym2ss(T_V/s)];
+end
 
+% Check if the system has current nodes
 if n_Ibus_1st<=N_Bus
     
 % Symbolic transfer function form
@@ -524,6 +535,39 @@ end
 % If the power system is in the loop topology. KH and Gamma_Hphi should be
 % semi-diagonalized and should have some relation. The values of KH will
 % rotate in each row.
+%
+% If analyzing voltage and current nodes seperately, KH and Gamma_Hphi for
+% two subloops should be re-calculated based on K, Hinv, Gamma, and can not
+% be seperate directly from the whole system KH and Gamma_Hphi.
+
+% Voltage node
+% This calculation might also be wrong! Because H is not eye matrix now!        	???  
+if n_Ibus_1st~= 1
+if isempty(KH22)
+    KH_V = KH;
+    [phi_V,xi_V] = eig(KH_V);
+    Gamma_Hphi_V = Gamma_Hphi;
+    [~,sigma_V,~] = svd(Gamma_Hphi_V);
+else
+    K_V = K11 - K12*inv(K22)*K21;
+    Gamma_V =  Gamma11 - K12*inv(K22)*Gamma21;
+    Hinv_V = Hinv(1:(n_Ibus_1st-1),1:(n_Ibus_1st-1));
+    KH_V = Hinv_V*K_V;
+    [phi_V,xi_V] = eig(KH_V);
+    Gamma_Hphi_V = inv(phi_V)*Hinv_V*Gamma_V*phi_V;
+    [~,sigma_V,~] = svd(Gamma_Hphi_V);
+end
+sigma_V_max = max(max(sigma_V));
+[zeta_m_V,w_min_V] = CalcZeta(T_V{n_v_ref},diag(xi_V));
+if min(min(real(xi_V)))<-1e-4
+    fprintf(['Error: xi_V_min = ' num2str(min(min(real(xi_V)))) ' < 0.']);
+end
+else
+	xi_V = [];
+    sigma_V = [];
+    zeta_m_V = [];
+    w_min_V = [];
+end
 
 % Current node
 % This calculation might be wrong!                                                      ???  
@@ -547,28 +591,6 @@ else
     sigma_I = [];
     zeta_m_I = [];
     w_min_I = [];
-end
-
-% Voltage node
-% This calculation might also be wrong! Because H is not eye matrix now!        	???  
-if isempty(KH22)
-    KH_V = KH;
-    [phi_V,xi_V] = eig(KH_V);
-    Gamma_Hphi_V = Gamma_Hphi;
-    [~,sigma_V,~] = svd(Gamma_Hphi_V);
-else
-    K_V = K11 - K12*inv(K22)*K21;
-    Gamma_V =  Gamma11 - K12*inv(K22)*Gamma21;
-    Hinv_V = Hinv(1:(n_Ibus_1st-1),1:(n_Ibus_1st-1));
-    KH_V = Hinv_V*K_V;
-    [phi_V,xi_V] = eig(KH_V);
-    Gamma_Hphi_V = inv(phi_V)*Hinv_V*Gamma_V*phi_V;
-    [~,sigma_V,~] = svd(Gamma_Hphi_V);
-end
-sigma_V_max = max(max(sigma_V));
-[zeta_m_V,w_min_V] = CalcZeta(T_V{n_v_ref},diag(xi_V));
-if min(min(real(xi_V)))<-1e-4
-    fprintf(['Error: xi_V_min = ' num2str(min(min(real(xi_V)))) ' < 0.']);
 end
 
 %% Calculate the state space representation
@@ -644,12 +666,21 @@ legend('Yunjie With F Shift','Yunjie Wihtout F Shift','Toolbox')
 %% Check stability
 % Criterion
 fprintf('Check the stability by the proposed criterion:\n')
-if min(zeta_m_V)>=sigma_V_max
-    StableVoltageNode = 1;
-else
-    StableVoltageNode = 0;
-end
+
+% Set the default values
+StableVoltageNode = 1;
 StableCurrentNode = 1;
+
+% Check voltage nodes
+if ~isempty(zeta_m_V)
+    if min(zeta_m_V)>=sigma_V_max
+        StableVoltageNode = 1;
+    else
+        StableVoltageNode = 0;
+    end
+end
+
+% Check current nodes
 if ~isempty(zeta_m_I)
     if min(zeta_m_I)>=sigma_I_max
         StableCurrentNode = 1;
@@ -657,6 +688,8 @@ if ~isempty(zeta_m_I)
         StableCurrentNode = 0;
     end
 end
+
+% Output
 if StableVoltageNode==1 && StableCurrentNode==1
     fprintf('Stable!\n')
 else
