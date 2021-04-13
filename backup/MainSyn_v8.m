@@ -23,18 +23,35 @@ clc
 close all
 
 %% Select data
+% Pure SG system
+% UserData = 'ExamplePowerSystem_v2.xlsx';      % pure SG system, 5 machines
+% UserData = 'ExamplePowerSystem_v2_1.xlsx';   	% pure SG system, 2 machine
+% UserData = 'ExamplePowerSystem_v2_2.xlsx';   	% pure SG system, 3 machine
+% UserData = 'ExamplePowerSystem_v2_3.xlsx';   	% pure SG system, random J,D
+% UserData = 'ExamplePowerSystem_v2_5.xlsx';   	% pure SG system, 3 machine, large Lflux and small Lline
+% UserData = 'ExamplePowerSystem_v2_6.xlsx';    % pure SG system, 5 machines, random all parameters with Zsg=0
+% UserData = 'ExamplePowerSystem_v2_7.xlsx';    % pure SG system, 5 machines, random all parameters
+% UserData = 'ExamplePowerSystem_v2_8.xlsx';   	% pure SG system, 3 machine, take Lflux to line
+% UserData = 'ExamplePowerSystem_v2_9.xlsx';   	% equivalent to v2_8 but with Lflux inside SG
+% UserData = 'ExamplePowerSystem_v2_10.xlsx';     % pure SG system, 5 machines, very small line impedance
+% UserData = 'ExamplePowerSystem_v2_11.xlsx';    % pure SG system, 5 machines, random all parameters, with floating buses
+% UserData = 'ExamplePowerSystem_v2_12.xlsx';    % pure SG system, 5 machines, random all parameters, with floating buses, with floating PL
+% UserData = 'ExamplePowerSystem_v2_13.xlsx';    % pure SG system, 5 machines, random all parameters, with high-order floating bus
+
 % Hybrid SG-IBR system
-% UserData = 'ExamplePowerSystem_v3.xlsx';    	% SG + SG + IBR
+UserData = 'ExamplePowerSystem_v3.xlsx';    	% SG + IBR
 % UserData = 'ExamplePowerSystem_v3_1.xlsx';    % SG + IBR + floating bus
 % UserData = 'ExamplePowerSystem_v3_2.xlsx';  	% SG + floating bus
 % UserData = 'ExamplePowerSystem_v3_3.xlsx';   	% One SG + One IBR + No load
 % UserData = 'ExamplePowerSystem_v3_4.xlsx';  	% One SG + One IBR
-% UserData = 'ExamplePowerSystem_v3_5.xlsx';    % SG + SG + IBR, + no SG inductor
-UserData = 'ExamplePowerSystem_v3_6.xlsx';    	% IBR + Load
 
 % Nature example
-% UserData = 'Nature_NETS_NYPS_68Bus_original';
+% UserData = 'Nature_NETS_NYPS_68Bus_original.xlsx';        % Standard
+% UserData = 'Nature_NETS_NYPS_68Bus_NoR';    	% No resistance in Lline and Lflux     
 % UserData = 'Nature_NETS_NYPS_68Bus_IBR';
+% UserData = 'Nature_NETS_NYPS_68Bus_NoTrans';
+% UserData = 'Nature_NETS_NYPS_68Bus_NoQL';
+% UserData = 'Nature_NETS_NYPS_68Bus_NegQLi';
 
 %% Load data
 fprintf('Loading data...\n')
@@ -172,6 +189,53 @@ for i = n_Ibus_1st:(n_Fbus_1st-1)
 end
 
 % =============================
+% Add current node
+% =============================
+if n_Ibus_1st>N_Bus
+    fprintf('Warning: The system has no current node.\n')
+else
+
+fprintf('Adding current node...\n')
+
+% Get the inner loop parameters
+% Notes: Assume all inverters are same
+for i = n_Ibus_1st:(n_Fbus_1st-1)
+kp_i = DevicePara{i}.kp_i_dq;  
+ki_i = DevicePara{i}.ki_i_dq;
+Lf   = DevicePara{i}.L;
+Rf   = DevicePara{i}.R;
+
+kp_pll{i} = DevicePara{i}.kp_pll;
+ki_pll{i} = DevicePara{i}.ki_pll;
+PI_pll{i} = kp_pll{i} + ki_pll{i}/s;
+end
+
+Gdel = 1;               % Assume no control delay
+Z_PIi = (kp_i + ki_i/(s-1i*W0))*Gdel;
+Z_inv = Z_PIi + s*Lf+Rf;
+% Y_inv = 1/Z_inv;
+Y_inv = (s-1i*W0)/((kp_i + s*Lf+Rf)*(s-1i*W0) + ki_i);
+
+% Convert Y_inv to double
+Y_inv_ = double(subs(Y_inv,'s',1i*(W0+dW)));
+Y_inv = double(subs(Y_inv,'s',1i*W0));
+% Notes:
+% When current controller is very fast, Y_inv -> 0 and can be ignored.
+
+% Add Y_inv to nodal admittance matrix
+if 0                                                                            % ??? 
+for i = 1:N_Bus
+    if DeviceSourceType{i} == 2
+        % Self branch
+        Ybus(i,i) = Ybus(i,i)+Y_inv;
+        Ybus_(i,i) = Ybus_(i,i) + Y_inv_;
+    end
+end
+end
+
+end
+
+% =============================
 % Eliminate floating node
 % =============================
 % Notes:
@@ -199,9 +263,6 @@ end
 % =============================
 % Add voltage node
 % =============================
-if n_Ibus_1st == 1
-    fprintf('Warning: The system has no voltage node.')
-else
 fprintf('Adding voltage node...\n')
 
 for i = 1:(n_Ibus_1st-1)
@@ -223,7 +284,6 @@ Y_sg_{i} = double(subs(Y_sg{i},'s',1i*(W0+dW)));
 Y_sg{i} = double(subs(Y_sg{i},'s',1i*W0));
 end    
 
-% Doing D-Y conversion
 if 1                                                                            % ??? 
 
 % Prepare star-delta conversion by adding new buses
@@ -249,97 +309,6 @@ I = I(1:N_Bus,:);
 V = inv(Ybus)*I;
 
 end
-
-% % Another way of doing D-Y conversion
-% % It seems like this method is wrong!
-% if 0                                                                           % ???
-%     for i=1:(n_Ibus_1st-1)
-%         Ybus(i,i) = Ybus(i,i) + Y_sg{i};
-%         Ybus_(i,i) = Ybus_(i,i) + Y_sg_{i};
-%     end
-% end
-
-end
-
-% =============================
-% Add current node
-% =============================
-if n_Ibus_1st>N_Bus
-    fprintf('Warning: The system has no current node.\n')
-else
-
-fprintf('Adding current node...\n')
-
-% Get the inner loop parameters
-% Notes: Assume all inverters are same
-for i = n_Ibus_1st:(n_Fbus_1st-1)
-kp_i = DevicePara{i}.kp_i_dq;  
-ki_i = DevicePara{i}.ki_i_dq;
-Lf   = DevicePara{i}.L;
-Rf   = DevicePara{i}.R;
-
-kp_pll{i} = DevicePara{i}.kp_pll;
-ki_pll{i} = DevicePara{i}.ki_pll;
-PI_pll{i} = kp_pll{i} + ki_pll{i}/s;
-end
-
-Gdel = 1;               % Assume no control delay
-
-% % alpha/beta
-% Z_PIi = kp_i + ki_i/(s-1i*W0);        
-% Z_Lf = s*Lf+Rf;
-% % Y_inv = 1/Z_Lf;
-% % Y_inv = 1/(Z_PIi + Z_Lf);
-% % Y_inv = 1/kp_i;
-% Y_inv = (s-1i*W0)/((kp_i + s*Lf+Rf)*(s-1i*W0) + ki_i);
-% % Y_inv = simplify(Y_inv);
-% Y_inv_ = double(subs(Y_inv,'s',1i*(W0+dW)));
-% Y_inv = double(subs(Y_inv,'s',1i*W0));
-
-% dq frame
-Z_PIi = kp_i + ki_i/s;                  
-Z_Lf = (s+1i*W0)*Lf+Rf;
-Z_inv = Z_PIi + Z_Lf;
-% % Y_inv = 1/(Z_PIi + Z_Lf);
-% Y_inv = s/(s*(kp_i + Z_Lf) + ki_i);                % dq
-% Y_inv = s/(s*(kp_i + (s+1i*W0)*Lf + Rf)); 
-% Y_inv = 1/kp_i;
-Y_inv = (s + I(n_Ibus_1st)^2*(s*kp_pll{n_Ibus_1st}+ki_pll{n_Ibus_1st})*Lf/2)/(s*kp_i + ki_i + s*Z_Lf);
-Y_inv_ = double(subs(Y_inv,'s',1i*dW));
-Y_inv = double(subs(Y_inv,'s',1i*0));
-
-% Notes:
-% The alpha/beta frame Zinner
-% Zinner = kp + ki/(s - j*w - j*dw) + (s+j*dw)*L + R
-% The dq frame Zinner
-% Zinner = kp + ki/(s-j*dw) + (s+j*w+j*dw)*L + R
-
-% Calculate Y_inv_prime
-Y_inv_prime = (Y_inv_ - Y_inv)/(1i*dW);
-
-% Notes:
-% When current controller is very fast, Y_inv -> 0 and can be ignored.
-
-% Add Y_inv to nodal admittance matrix
-if 1                                                                          % ??? 
-    
-for i = 1:N_Bus
-    if DeviceSourceType{i} == 2
-        % Self branch
-        Ybus(i,i) = Ybus(i,i)+Y_inv;
-        Ybus_(i,i) = Ybus_(i,i) + Y_inv_;
-        t1 = 1
-    end
-end
-end
-
-% Update I
-I = Ybus*V;
-
-end
-
-% Notes:
-% Doing D-Y conversion first, add Yinv next?
 
 %% Network matrix
 fprintf('Calculating network matrix...\n')
@@ -379,20 +348,10 @@ for i = 1:N_Bus
         epsilon(i) = 0;
     elseif DeviceSourceType{i} == 2
         epsilon(i) = pi/2;
-      	if real(I(i))>0
-            epsilon(i) = -epsilon(i);
-        end
     else
         error(['Error']);
     end
 end
-% Notes:
-% For current node, conventional PLL uses vq rather than Q to achieve the
-% synchronization. Q = vq*id if iq = 0. That means, the power flow
-% direction id will influence the sign of Q, which also means the sign of
-% loop gain also has to be changed to ensure the system stability. Here, we
-% change the direction of Hinv(i,i) or equivantly the value of epsilon_m
-% depending on the power flow, to ensure xi >=0 and the stability.
 
 % Get K matrix
 for m = 1:N_Bus
@@ -439,8 +398,6 @@ Hinv = eye(N_Bus);      % Let Hinv be identity matrix initially
 n_i_ref = n_Ibus_1st;        % Select the first current node as the reference
 n_v_ref = 1;               % Select the first voltage node as the reference
 
-% Check if the system has voltage node
-if n_Ibus_1st ~= 1
 % Symbolic transfer function form:
 % omega = 1/(D + J*s) * W;
 for i = 1:(n_Ibus_1st-1)
@@ -472,9 +429,7 @@ T_V_ss = ss(Av,Bv,Cv,Dv);
 % Auto conversion of state space
 % T_V_ss = [SimplexPS.sym2ss(T_V);
 %           SimplexPS.sym2ss(T_V/s)];
-end
 
-% Check if the system has current nodes
 if n_Ibus_1st<=N_Bus
     
 % Symbolic transfer function form
@@ -494,13 +449,13 @@ end
 % dx/dt = [dlamda]/dt = [0 ,0]*[lambda] + [1 ]*[W]
 %         [dtheta]      [ki,0] [theta ]   [kp]
 % y = [omega] = [ki,0]*[lambda] + [kp]*[W]
-%     [theta]   [0 ,1] [theta ]   [0 ]
+%     [theta]   [1 ,0] [theta ]   [0 ]
 Ai = [0,               0;
       ki_pll{n_i_ref}, 0];
 Bi = [1;
       kp_pll{n_i_ref}];
 Ci = [ki_pll{n_i_ref}, 0;
-      0,               1];
+      1,               0];
 Di = [kp_pll{n_i_ref};
       0];
 T_I_ss = ss(Ai,Bi,Ci,Di);
@@ -562,7 +517,6 @@ end
 
 % Voltage node
 % This calculation might also be wrong! Because H is not eye matrix now!        	???  
-if n_Ibus_1st~= 1
 if isempty(KH22)
     KH_V = KH;
     [phi_V,xi_V] = eig(KH_V);
@@ -581,12 +535,6 @@ sigma_V_max = max(max(sigma_V));
 [zeta_m_V,w_min_V] = CalcZeta(T_V{n_v_ref},diag(xi_V));
 if min(min(real(xi_V)))<-1e-4
     fprintf(['Error: xi_V_min = ' num2str(min(min(real(xi_V)))) ' < 0.']);
-end
-else
-	xi_V = [];
-    sigma_V = [];
-    zeta_m_V = [];
-    w_min_V = [];
 end
 
 %% Calculate the state space representation
@@ -652,9 +600,9 @@ figure(figure_n)
 scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
 scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
 pole_sys_toolbox = load('pole_sys').pole_sys;
-index = find(abs(imag(pole_sys_toolbox))<35);
+index = find(abs(imag(pole_sys_toolbox))<45);
 pole_sys_toolbox = pole_sys_toolbox(index);
-index = find(abs(real(pole_sys_toolbox))<35);
+index = find(abs(real(pole_sys_toolbox))<1);
 pole_sys_toolbox = pole_sys_toolbox(index);
 scatter(real(pole_sys_toolbox),imag(pole_sys_toolbox),'x','LineWidth',1.5); hold on; grid on;
 legend('Yunjie With F Shift','Yunjie Wihtout F Shift','Toolbox')
@@ -662,13 +610,10 @@ legend('Yunjie With F Shift','Yunjie Wihtout F Shift','Toolbox')
 %% Check stability
 % Criterion
 fprintf('Check the stability by the proposed criterion:\n')
-StableVoltageNode = 1;
-if ~isempty(zeta_m_V)
-    if min(zeta_m_V)>=sigma_V_max
-        StableVoltageNode = 1;
-    else
-        StableVoltageNode = 0;
-    end
+if min(zeta_m_V)>=sigma_V_max
+    StableVoltageNode = 1;
+else
+    StableVoltageNode = 0;
 end
 StableCurrentNode = 1;
 if ~isempty(zeta_m_I)

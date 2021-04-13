@@ -2,20 +2,54 @@ clear all
 clc
 close all
 
-pole_sys_toolbox = load('pole_sys').pole_sys;
-pole_sys_toolbox_ = load('pole_sys_').pole_sys;
+% s = tf('s');
+s = sym('s','real');
 
-index = find(abs(imag(pole_sys_toolbox))<45);
-pole_sys_toolbox = pole_sys_toolbox(index);
-index = find(abs(real(pole_sys_toolbox))<20);
-pole_sys_toolbox = pole_sys_toolbox(index);
+W0 = 2*pi*50;
 
-index = find(abs(imag(pole_sys_toolbox_))<45);
-pole_sys_toolbox_ = pole_sys_toolbox_(index);
-index = find(abs(real(pole_sys_toolbox_))<20);
-pole_sys_toolbox_ = pole_sys_toolbox_(index);
+% AC filter
+X = 0.05;
+L = X/W0;
+R = X/5;
 
-figure(999)
-scatter(real(pole_sys_toolbox),imag(pole_sys_toolbox),'x','LineWidth',1.5); hold on; grid on;
-scatter(real(pole_sys_toolbox_),imag(pole_sys_toolbox_),'x','LineWidth',1.5); hold on; grid on;
-legend('toolbox,w','toolbox,w0')
+% AC load
+Yload = 0.5;
+Zload = 1/Yload;
+
+% Current loop
+wi = 2*pi*250;
+kpi = wi*L;
+kii = wi^2*L/4;
+
+PIi = kpi + kii/s;
+
+% PLL controller
+w_pll = 2*pi*10;
+kp_pll = w_pll;
+ki_pll = w_pll^2/4;
+
+PIpll = kp_pll + ki_pll/s;
+
+%% Impedance method
+Zin = PIi + (s+1i*W0)*L + R;
+Zload = 1/0.5;
+
+Gcl = 1/(Zin+Zload);
+
+if ~strcmpi(class(s),'sym')
+pole_sys = pole(Gcl)/2/pi;
+pole_sys(1)
+pole_sys(2)
+end
+
+%% Yunjie's method
+w = sym('w');
+Zin_ab = kpi + kii/(s - 1i*w) + s*L + R;
+Gbus = - 1/((1/Zin_ab) + Yload);
+dGbus_dw = diff(Gbus,w)
+
+dGbus_dw = subs(dGbus_dw,W0);
+S = 0.5*0.5;
+Gamma = real(-S*dGbus_dw*exp(-pi/2));
+Gamma = simplify(Gamma)
+
