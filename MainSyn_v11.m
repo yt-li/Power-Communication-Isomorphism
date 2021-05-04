@@ -30,75 +30,39 @@ close all
 % UserData = 'ExamplePowerSystem_v4';         % SG + IBR
 
 % Nature example
-% UserData = 'Nature_NETS_NYPS_68Bus_original';
+UserData = 'Nature_NETS_NYPS_68Bus_original';
+% UserData = 'Nature_NETS_NYPS_68Bus_IBR_all';
+% UserData = 'Nature_NETS_NYPS_68Bus_1SG_OtherIBR';
+% UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
 % UserData = 'Nature_NETS_NYPS_68Bus_IBR';
 % UserData = 'Nature_NETS_NYPS_68Bus_IBR_v1';
 
 % Test Power Flow
-UserData = '3MachineModel';
+% UserData = '3MachineModel_v1_test';
+% UserData = '3MachineModel_v1_3SG';
+% UserData = '3MachineModel_v2_SG_IBR_SG';
+% UserData = '3MachineModel_v3_SG_IBR_IBR';
+% UserData = '3MachineModel_v4_3IBR';
+% UserData = '2MachineModel_test';
+
+% UserData = 'IEEE_14Bus';
+% UserData = 'IEEE_30Bus';
+% UserData = 'IEEE_57Bus';
+
+%% Enable
+Enable_Plot_ComparisonToolbox   = 1;
+Enable_VoltageNode_InnerLoop    = 1;
+Enable_CurrentNode_InnerLoop    = 0;
 
 %% Load data
 fprintf('Loading data...\n')
-
-% ### Re-arrange basic settings
-ListBasic = xlsread(UserData,'Basic');
-
-Fs = ListBasic(1);
-Ts = 1/Fs;              % (s), sampling period
-Fbase = ListBasic(2);   % (Hz), base frequency
-Sbase = ListBasic(3);   % (VA), base power
-Vbase = ListBasic(4);   % (V), base voltage
-Ibase = Sbase/Vbase;    % (A), base current
-Zbase = Sbase/Ibase;    % (Ohm), base impedance
-Ybase = 1/Zbase;        % (S), base admittance
-Wbase = Fbase*2*pi;     % (rad/s), base angular frequency
-
-% ### Re-arrange advanced settings
-ListAdvance = xlsread(UserData,'Advance');
-Flag_PowerFlowAlgorithm   	= ListAdvance(5);
-Enable_CreateSimulinkModel	= ListAdvance(6);
-Enable_PlotPole           	= ListAdvance(7);
-Enable_PlotAdmittance     	= ListAdvance(8);
-Enable_PrintOutput       	= ListAdvance(9);
-Enable_Participation        = ListAdvance(10);
-
-% ### Re-arrange the bus netlist
-[ListBus,N_Bus] = SimplexPS.Toolbox.RearrangeListBus(UserData);
-
-% ### Re-arrange the line netlist
-[ListLine,N_Branch.N_Bus_] = SimplexPS.Toolbox.RearrangeListLine(UserData,ListBus);
-
-% ### Re-arrange the device netlist
-[DeviceBus,DeviceType,DevicePara,N_Device] = SimplexPS.Toolbox.RearrangeListDevice(UserData,Wbase,ListBus);
-
-% Notes:
-% The codes in this part are borrowed from the SimplexPS toolbox.
+LoadData();
 
 %% Power Flow
 fprintf('Doing power flow anlaysis...\n')
+PowerFlowCal();
 
-% ### Power flow analysis
-% [PowerFlow,~,V_,I_,~,~,~,~] = SimplexPS.PowerFlow.PowerFlowGS(ListBus,ListLine,Wbase);
-[PowerFlow] = SimplexPS.PowerFlow.PowerFlowNR(ListBus,ListLine,Wbase);
-% Form of PowerFlow{i}: P, Q, V, xi, w
-
-% Move load flow (PLi and QLi) to bus admittance matrix
-[ListBus,ListLineNew,PowerFlowNew] = SimplexPS.PowerFlow.Load2SelfBranch(ListBus,ListLine,PowerFlow);
-
-% For printting later
-ListPowerFlow = SimplexPS.PowerFlow.Rearrange(PowerFlow);
-ListPowerFlow_ = SimplexPS.PowerFlow.Rearrange(PowerFlowNew);
-P = ListPowerFlow_(:,2);
-
-% Update V and I
-[V,I] = PowerFlowUpdateVI(PowerFlowNew);
-
-% Notes:
-% The codes in this part are borrowed from the SimplexPS toolbox. The V and
-% I are updated based on the new power flow.
-
-%% Apparatus data and nodal admittance matrix
-
+%% Nodal admittance matrix
 % Symbolic
 s = sym('s');
 
@@ -109,27 +73,8 @@ W0 = Wbase;
 fprintf('Calculating nodal admittance matrix...\n')
 Ybus = YbusCalc_s_sym(ListLineNew,W0,'albe');
 
-% Nnotes:
-% Ybus should statisfy: I = Ybus*V
-
-% Convert Ybus to double
-dW = 1e-10*(1+Wbase);
-Ybus_ = double(subs(Ybus,'s',1i*(W0+dW)));   % Used for calculating derivative numerically
-Ybus = double(subs(Ybus,'s',1i*W0));
-
-% Ybus_ = double(subs(Ybus,'s',1i*(0+dW)));   % Used for calculating derivative numerically
-% Ybus = double(subs(Ybus,'s',1i*0));
-
-% Notes:
-% If using s-domain Ybus calculation and using vectors as input, then, the
-% system admittance matrix has to be symmetric. The good news is that, the
-% passive component, and the inner loops of inverters, are indeed symmtric
-% in complex dq and alpha/beta frame.
-
+%% Apparatus Data
 % Get the device source type:
-% Notes:
-% In the netlist, the device source type has to be listed like this:
-% all voltage nodes, all current nodes, all floating bus nodes.
 for i = 1:N_Bus
     if DeviceType{i}==1
       	DeviceSourceType{i} = 1;    % Voltage node
@@ -141,6 +86,27 @@ for i = 1:N_Bus
      	error(['Error']);
     end
 end
+
+% Notes:
+% In the netlist, the device source type has to be listed like this:
+% all voltage nodes, all current nodes, all floating bus nodes.
+%
+% This should be improved. Meanwhile, Ybus and PowerFlow should also be
+% updated.
+
+% Nnotes:
+% Ybus should statisfy: I = Ybus*V
+
+% Convert Ybus to double
+dW = 1e-10*(1+Wbase);
+Ybus_ = double(subs(Ybus,'s',1i*(W0+dW)));   % Used for calculating derivative numerically
+Ybus = double(subs(Ybus,'s',1i*W0));
+
+% Notes:
+% If using s-domain Ybus calculation and using vectors as input, then, the
+% system admittance matrix has to be symmetric. The good news is that, the
+% passive component, and the inner loops of inverters, are indeed symmtric
+% in complex dq and alpha/beta frame.
 
 % Find the index of the first floating bus/node
 n_Fbus_1st = N_Bus+1;  % Default: no floating bus
@@ -186,8 +152,8 @@ else
     
 fprintf('Eliminating floating node...\n')
 
-Ybus = HybridYZMatrix(Ybus,n_Fbus_1st);
-Ybus_ = HybridYZMatrix(Ybus_,n_Fbus_1st);
+Ybus = HybridMatrixYZ(Ybus,n_Fbus_1st);
+Ybus_ = HybridMatrixYZ(Ybus_,n_Fbus_1st);
 
 if n_Ibus_1st>N_Bus
    n_Ibus_1st = n_Fbus_1st;     % Update Ibus_1st
@@ -203,7 +169,7 @@ end
 % Add voltage node
 % =============================
 if n_Ibus_1st == 1
-    fprintf('Warning: The system has no voltage node.')
+    fprintf('Warning: The system has no voltage node.\n')
 else
 fprintf('Adding voltage node...\n')
 
@@ -227,18 +193,18 @@ Y_sg{i} = double(subs(Y_sg{i},'s',1i*W0));
 end    
 
 % Doing D-Y conversion
-if 1                                                                            % ??? 
+if Enable_VoltageNode_InnerLoop                                           	% ??? 
 
 % Prepare star-delta conversion by adding new buses
-Ybus = PrepareDY(Ybus,n_Ibus_1st,N_Bus,Y_sg);
-Ybus_ = PrepareDY(Ybus_,n_Ibus_1st,N_Bus,Y_sg_);
+Ybus = PrepareConvertDY(Ybus,n_Ibus_1st,N_Bus,Y_sg);
+Ybus_ = PrepareConvertDY(Ybus_,n_Ibus_1st,N_Bus,Y_sg_);
     
 % Doing the star-delta conversion.
 % Notes: Assume old voltage bus as zero current bus, and then switch the
 % current and voltage for these buses so that current becomes input, and
 % finally remove corresponding blocks because the input current is zero.
-Ybus = HybridYZMatrix(Ybus,N_Bus+1);
-Ybus_ = HybridYZMatrix(Ybus_,N_Bus+1);
+Ybus = HybridMatrixYZ(Ybus,N_Bus+1);
+Ybus_ = HybridMatrixYZ(Ybus_,N_Bus+1);
 
 % Eliminate the old voltage bus, i.e., zero current bus
 Ybus = Ybus(1:N_Bus,1:N_Bus);
@@ -287,15 +253,11 @@ PI_pll{i} = kp_pll{i} + ki_pll{i}/s;
 
 end
 
-Gdel = 1;               % Assume no control delay
-
 wm = sym('wm');
 
 % alpha/beta
 Z_PIi = kp_i + ki_i/(s-1i*wm);        
 Z_Lf = s*Lf+Rf;
-% Y_inv = (s-1i*wm)/((kp_i + (s-1i*wm+1i*W0)*Lf+Rf)*(s-1i*wm) + ki_i);
-% Y_inv = simplify(Y_inv);
 % ki_i = ki_i*5;                                                                 % ??????
 Y_inv = (s-1i*wm)/((kp_i + s*Lf+Rf)*(s-1i*wm) + ki_i);
 
@@ -309,26 +271,6 @@ Y_inv = subs(Y_inv,'wm',W0);
 Y_inv_ = double(subs(Y_inv,'s',1i*(W0+dW)));
 Y_inv = double(subs(Y_inv,'s',1i*W0));
 
-% % dq frame
-% % Z_PIi = kp_i + ki_i/s;                  
-% Z_Lf = (s+1i*W0)*Lf+Rf;
-% % Z_Lf = 0;                                                                     % ??? 
-% % ki_i = 0;                                                                   	% ???
-% % fprintf('### Warning: ki_i = 0')                                           	% ???
-% % Z_inv = Z_PIi + Z_Lf;
-% % Y_inv = 1/(Z_PIi + Z_Lf);
-% Y_inv = s/(s*(kp_i + Z_Lf) + ki_i);                % dq
-% % Y_inv = s/(s*(kp_i + (s+1i*W0)*Lf + Rf)); 
-% % Y_inv = 1/kp_i;
-% Y_inv_ = double(subs(Y_inv,'s',1i*dW));
-% Y_inv = double(subs(Y_inv,'s',1i*0));
-
-% Notes:
-% The alpha/beta frame Zinner
-% Zinner = kp + ki/(s - j*w - j*dw) + (s+j*dw)*L + R
-% The dq frame Zinner
-% Zinner = kp + ki/(s-j*dw) + (s+j*w+j*dw)*L + R
-
 % Calculate Y_inv_prime
 Y_inv_prime = (Y_inv_ - Y_inv)/(1i*dW);
 
@@ -336,7 +278,7 @@ Y_inv_prime = (Y_inv_ - Y_inv)/(1i*dW);
 % When current controller is very fast, Y_inv -> 0 and can be ignored.
 
 % Add Y_inv to nodal admittance matrix
-if 1                                                                            % ??? 
+if Enable_CurrentNode_InnerLoop                                                 % ??? 
     
 for i = 1:N_Bus
     if DeviceSourceType{i} == 2
@@ -345,13 +287,14 @@ for i = 1:N_Bus
         Ybus_(i,i) = Ybus_(i,i) + Y_inv_;
         Ybus_dwn(i,i) = Ybus_dwn(i,i) + Y_inv_dwn;
         Ybus_dwm(i,i) = Ybus_dwm(i,i) + Y_inv_dwm;
-        t1 = 1                                                                  % ???
     end
-end
 end
 
 % Update I
+V = V(1:N_Bus,:);
 I = Ybus*V;
+
+end
 
 end
 
@@ -362,10 +305,10 @@ end
 fprintf('Calculating network matrix...\n')
 
 % Convert the nodol admittance matrix to hybrid admittance/impedance matrix
-Gbus = HybridYZMatrix(Ybus,n_Ibus_1st);
-Gbus_ = HybridYZMatrix(Ybus_,n_Ibus_1st);
-Gbus_dwn = HybridYZMatrix(Ybus_dwn,n_Ibus_1st);
-Gbus_dwm = HybridYZMatrix(Ybus_dwm,n_Ibus_1st);
+Gbus = HybridMatrixYZ(Ybus,n_Ibus_1st);
+Gbus_ = HybridMatrixYZ(Ybus_,n_Ibus_1st);
+Gbus_dwn = HybridMatrixYZ(Ybus_dwn,n_Ibus_1st);
+Gbus_dwm = HybridMatrixYZ(Ybus_dwm,n_Ibus_1st);
 
 % Notes:
 % It should be ensured that the buses are listed in the form like this:
@@ -407,6 +350,7 @@ for i = 1:N_Bus
         epsilon(i) = pi/2;
       	if real(I(i))>0
             epsilon(i) = -epsilon(i);
+            test1 = 1
         end
     else
         error(['Error']);
@@ -422,6 +366,10 @@ end
 % stability. Noting that Q is in load convention, so, id should also be
 % load convention. That means, when I>0 which means the IBR is generating
 % active power, the sign of epsilon should be changed.
+
+% For test                                                                      % ??????
+% epsilon(2) = -epsilon(2)
+% test2 = 1
 
 % Get K matrix
 for m = 1:N_Bus
@@ -714,6 +662,7 @@ scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on;
 scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
 legend('L12','L1')
 
+if Enable_Plot_ComparisonToolbox
 figure_n = figure_n+1;
 figure(figure_n)
 scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
@@ -723,6 +672,7 @@ index = find(abs(imag(pole_sys_toolbox))<35);
 pole_sys_toolbox = pole_sys_toolbox(index);
 scatter(real(pole_sys_toolbox),imag(pole_sys_toolbox),'x','LineWidth',1.5); hold on; grid on;
 legend('Yunjie With F Shift','Yunjie Wihtout F Shift','Toolbox')
+end
 
 %% Check stability
 % Criterion
