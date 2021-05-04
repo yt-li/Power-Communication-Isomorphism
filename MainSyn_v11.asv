@@ -30,12 +30,13 @@ close all
 % UserData = 'ExamplePowerSystem_v4';         % SG + IBR
 
 % Nature example
-% UserData = 'Nature_NETS_NYPS_68Bus_original';
+UserData = 'Nature_NETS_NYPS_68Bus_original';
 % UserData = 'Nature_NETS_NYPS_68Bus_IBR_all';
 % UserData = 'Nature_NETS_NYPS_68Bus_1SG_OtherIBR';
 % UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
 % UserData = 'Nature_NETS_NYPS_68Bus_IBR';
 % UserData = 'Nature_NETS_NYPS_68Bus_IBR_v1';
+UserData = 'Nature_NETS_NYPS_68Bus_original_TestReorder';
 
 % Test Power Flow
 % UserData = '3MachineModel_v1_test';
@@ -43,14 +44,16 @@ close all
 % UserData = '3MachineModel_v2_SG_IBR_SG';
 % UserData = '3MachineModel_v3_SG_IBR_IBR';
 % UserData = '3MachineModel_v4_3IBR';
-UserData = '2MachineModel_test';
+% UserData = '2MachineModel_test';
 
 % UserData = 'IEEE_14Bus';
 % UserData = 'IEEE_30Bus';
 % UserData = 'IEEE_57Bus';
 
 %% Enable
-enable_plot_comparison = 0;
+Enable_Plot_ComparisonToolbox   = 1;
+Enable_VoltageNode_InnerLoop    = 1;
+Enable_CurrentNode_InnerLoop    = 0;
 
 %% Load data
 fprintf('Loading data...\n')
@@ -60,8 +63,7 @@ LoadData();
 fprintf('Doing power flow anlaysis...\n')
 PowerFlowCal();
 
-%% Apparatus data and nodal admittance matrix
-
+%% Nodal admittance matrix
 % Symbolic
 s = sym('s');
 
@@ -72,6 +74,44 @@ W0 = Wbase;
 fprintf('Calculating nodal admittance matrix...\n')
 Ybus = YbusCalc_s_sym(ListLineNew,W0,'albe');
 
+%% Reorder the Data
+
+
+
+% Get the device source type:
+for i = 1:N_Bus
+    if DeviceType{i}==1
+      	DeviceSourceType(i) = 1;    % Voltage node
+    elseif DeviceType{i}==11
+    	DeviceSourceType(i) = 2;    % Current node
+    elseif DeviceType{i}==100       
+        DeviceSourceType(i) = 3;    % Floating node     
+    else
+     	error(['Error']);
+    end
+end
+Index_Vbus = find(DeviceSourceType == 1);
+Index_Ibus = find(DeviceSourceType == 2);
+Index_Fbus = find(DeviceSourceType == 3);
+NewOrder = [Index_Vbus,Index_Ibus,Index_Fbus];
+
+% Re-order device source tyoe
+DeviceSourceType = DeviceSourceType(:,NewOrder);
+
+% Re-order power flow
+V = V(NewOrder,:);
+I = I(NewOrder,:);
+
+% Re-order nodal admittance matrix
+Ybus = Ybus(NewOrder,NewOrder);
+
+% Re-order device para
+for i = 1:N_Bus
+    DeviceTypeNew{i} = DeviceType{NewOrder(i)};
+    DeviceParaNew{i} = DevicePara{NewOrder(i)};
+end
+
+%% Apparatus Data
 % Nnotes:
 % Ybus should statisfy: I = Ybus*V
 
@@ -89,7 +129,7 @@ Ybus = double(subs(Ybus,'s',1i*W0));
 % Find the index of the first floating bus/node
 n_Fbus_1st = N_Bus+1;  % Default: no floating bus
 for i = 1:N_Bus
-    if DeviceSourceType{i} == 3
+    if DeviceSourceType(i) == 3
         n_Fbus_1st = i;
         break;
     end
@@ -97,7 +137,7 @@ end
 
 % Check if the following buses are all floating buses
 for i = n_Fbus_1st:N_Bus
-    if DeviceSourceType{i} ~= 3
+    if DeviceSourceType(i) ~= 3
         error(['Error']);
     end
 end
@@ -105,7 +145,7 @@ end
 % Find the index of the first current bus/node
 n_Ibus_1st = N_Bus+1;   % Default: no current bus
 for i = 1:N_Bus
-    if DeviceSourceType{i} == 2
+    if DeviceSourceType(i) == 2
         n_Ibus_1st = i;
         break;
     end
@@ -113,7 +153,7 @@ end
 
 % Check if the following buses are all current buses
 for i = n_Ibus_1st:(n_Fbus_1st-1)
-    if DeviceSourceType{i} ~= 2
+    if DeviceSourceType(i) ~= 2
         error(['Error']);
     end
 end
@@ -152,16 +192,16 @@ else
 fprintf('Adding voltage node...\n')
 
 for i = 1:(n_Ibus_1st-1)
-J{i} = DevicePara{i}.J;
-D{i} = DevicePara{i}.D;
+J{i} = DeviceParaNew{i}.J;
+D{i} = DeviceParaNew{i}.D;
 J{i} = J{i}*Wbase;
 D{i} = D{i}*Wbase;
 % Notes: Adding '*Wbase' is because the power swing equation rather than
 % the torque swing equation is used, and P=T*w0 if w is not in per unit
 % system.
 
-Lsg = DevicePara{i}.L;
-Rsg = DevicePara{i}.R;
+Lsg = DeviceParaNew{i}.L;
+Rsg = DeviceParaNew{i}.R;
 Zsg = s*Lsg + Rsg;
 Y_sg{i} = 1/Zsg;
 
@@ -171,7 +211,7 @@ Y_sg{i} = double(subs(Y_sg{i},'s',1i*W0));
 end    
 
 % Doing D-Y conversion
-if 0                                                                            % ??? 
+if Enable_VoltageNode_InnerLoop                                           	% ??? 
 
 % Prepare star-delta conversion by adding new buses
 Ybus = PrepareConvertDY(Ybus,n_Ibus_1st,N_Bus,Y_sg);
@@ -214,13 +254,13 @@ fprintf('Adding current node...\n')
 % Get the inner loop parameters
 % Notes: Assume all inverters are same
 for i = n_Ibus_1st:(n_Fbus_1st-1)
-kp_i = DevicePara{i}.kp_i_dq;  
-ki_i = DevicePara{i}.ki_i_dq;
-Lf   = DevicePara{i}.L;
-Rf   = DevicePara{i}.R;
+kp_i = DeviceParaNew{i}.kp_i_dq;  
+ki_i = DeviceParaNew{i}.ki_i_dq;
+Lf   = DeviceParaNew{i}.L;
+Rf   = DeviceParaNew{i}.R;
 
-kp_pll{i} = DevicePara{i}.kp_pll;
-ki_pll{i} = DevicePara{i}.ki_pll;
+kp_pll{i} = DeviceParaNew{i}.kp_pll;
+ki_pll{i} = DeviceParaNew{i}.ki_pll;
 kp_pll{i} = kp_pll{i}/abs(P(i));
 ki_pll{i} = ki_pll{i}/abs(P(i));
 PI_pll{i} = kp_pll{i} + ki_pll{i}/s;
@@ -256,10 +296,10 @@ Y_inv_prime = (Y_inv_ - Y_inv)/(1i*dW);
 % When current controller is very fast, Y_inv -> 0 and can be ignored.
 
 % Add Y_inv to nodal admittance matrix
-if 0                                                                            % ??? 
+if Enable_CurrentNode_InnerLoop                                                 % ??? 
     
 for i = 1:N_Bus
-    if DeviceSourceType{i} == 2
+    if DeviceSourceType(i) == 2
         % Self branch
         Ybus(i,i) = Ybus(i,i) + Y_inv;
         Ybus_(i,i) = Ybus_(i,i) + Y_inv_;
@@ -322,9 +362,9 @@ S = conj(Input)*transpose(Input);
 
 % Get epsilon
 for i = 1:N_Bus
-    if DeviceSourceType{i} == 1
+    if DeviceSourceType(i) == 1
         epsilon(i) = 0;
-    elseif DeviceSourceType{i} == 2
+    elseif DeviceSourceType(i) == 2
         epsilon(i) = pi/2;
       	if real(I(i))>0
             epsilon(i) = -epsilon(i);
@@ -584,9 +624,9 @@ end
 % Get whole system Tss
 Tss = [[],[],[],[]];
 for i = 1:N_Bus
-    if DeviceSourceType{i} == 1
+    if DeviceSourceType(i) == 1
         Tss = append(Tss,T_V_ss);
-    elseif DeviceSourceType{i} == 2
+    elseif DeviceSourceType(i) == 2
         Tss = append(Tss,T_I_ss);
     else
         error(['Error']);
@@ -640,7 +680,7 @@ scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on;
 scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
 legend('L12','L1')
 
-if enable_plot_comparison
+if Enable_Plot_ComparisonToolbox
 figure_n = figure_n+1;
 figure(figure_n)
 scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;

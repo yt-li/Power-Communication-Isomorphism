@@ -2,13 +2,7 @@
 
 %% Notes
 %
-% PLi and QLi should be combined into the nodal admittance matrix.
-%
 % Devices should be listed in the same order as the bus.
-%
-% The flux inductor of SGs should be combined into the line impedances.
-%
-% The reference direction should be doubled checked: Ybus, Gbus, T,
 
 %% Clear
 clear all
@@ -17,17 +11,9 @@ close all
 
 %% Select data
 
-% Single SG
-% UserData = 'SingleSG.xlsx';         % SG + resistive load
-
-% Single IBR
+% Single Machine
+% UserData = 'SingleSG.xlsx';     	% SG + resistive load
 % UserData = 'SingleIBR.xlsx';    	% IBR + resistive load
-% UserData = 'SingleIBR_v1';
-
-% Multi-machine system
-% UserData = 'ExamplePowerSystem_v3.xlsx';    	% SG + SG + IBR
-
-% UserData = 'ExamplePowerSystem_v4';         % SG + IBR
 
 % Nature example
 UserData = 'Nature_NETS_NYPS_68Bus_original';
@@ -36,6 +22,7 @@ UserData = 'Nature_NETS_NYPS_68Bus_original';
 % UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
 % UserData = 'Nature_NETS_NYPS_68Bus_IBR';
 % UserData = 'Nature_NETS_NYPS_68Bus_IBR_v1';
+UserData = 'Nature_NETS_NYPS_68Bus_original_TestReorder';
 
 % Test Power Flow
 % UserData = '3MachineModel_v1_test';
@@ -66,34 +53,58 @@ PowerFlowCal();
 % Symbolic
 s = sym('s');
 
-% Set
-W0 = Wbase;
-
 % Calculate nodal admittance matrix
 fprintf('Calculating nodal admittance matrix...\n')
+W0 = Wbase;
 Ybus = YbusCalc_s_sym(ListLineNew,W0,'albe');
 
-%% Apparatus Data
+%% Reorder the Data
+
+% Notes:
+% In this code, the bus/node should be orderred in this sequence:
+% [all voltage nodes, all current nodes, all floating bus nodes], i.e.,
+% [v bus, ..., v bus, i bus, ..., i bus, f bus, ... f bus].
+% Hence, in this subsection, we re-order all data first to make sure that
+% this required sequence can be obtained. Noting that, the device data, the
+% power flow data, and the network line data should all be re-orderred.
+%
+% Maybe in the end of this code, I should re-order the result back to its
+% original sequence.
+
 % Get the device source type:
 for i = 1:N_Bus
     if DeviceType{i}==1
-      	DeviceSourceType{i} = 1;    % Voltage node
+      	DeviceSourceType(i) = 1;    % Voltage node
     elseif DeviceType{i}==11
-    	DeviceSourceType{i} = 2;    % Current node
+    	DeviceSourceType(i) = 2;    % Current node
     elseif DeviceType{i}==100       
-        DeviceSourceType{i} = 3;    % Floating node     
+        DeviceSourceType(i) = 3;    % Floating node     
     else
      	error(['Error']);
     end
 end
+Index_Vbus = find(DeviceSourceType == 1);
+Index_Ibus = find(DeviceSourceType == 2);
+Index_Fbus = find(DeviceSourceType == 3);
+NewOrder = [Index_Vbus,Index_Ibus,Index_Fbus];
 
-% Notes:
-% In the netlist, the device source type has to be listed like this:
-% all voltage nodes, all current nodes, all floating bus nodes.
-%
-% This should be improved. Meanwhile, Ybus and PowerFlow should also be
-% updated.
+% Re-order device source tyoe
+DeviceSourceType = DeviceSourceType(:,NewOrder);
 
+% Re-order power flow
+V = V(NewOrder,:);
+I = I(NewOrder,:);
+
+% Re-order nodal admittance matrix
+Ybus = Ybus(NewOrder,NewOrder);
+
+% Re-order device para
+for i = 1:N_Bus
+    DeviceTypeNew{i} = DeviceType{NewOrder(i)};
+    DeviceParaNew{i} = DevicePara{NewOrder(i)};
+end
+
+%% Apparatus Data
 % Nnotes:
 % Ybus should statisfy: I = Ybus*V
 
@@ -111,7 +122,7 @@ Ybus = double(subs(Ybus,'s',1i*W0));
 % Find the index of the first floating bus/node
 n_Fbus_1st = N_Bus+1;  % Default: no floating bus
 for i = 1:N_Bus
-    if DeviceSourceType{i} == 3
+    if DeviceSourceType(i) == 3
         n_Fbus_1st = i;
         break;
     end
@@ -119,7 +130,7 @@ end
 
 % Check if the following buses are all floating buses
 for i = n_Fbus_1st:N_Bus
-    if DeviceSourceType{i} ~= 3
+    if DeviceSourceType(i) ~= 3
         error(['Error']);
     end
 end
@@ -127,7 +138,7 @@ end
 % Find the index of the first current bus/node
 n_Ibus_1st = N_Bus+1;   % Default: no current bus
 for i = 1:N_Bus
-    if DeviceSourceType{i} == 2
+    if DeviceSourceType(i) == 2
         n_Ibus_1st = i;
         break;
     end
@@ -135,7 +146,7 @@ end
 
 % Check if the following buses are all current buses
 for i = n_Ibus_1st:(n_Fbus_1st-1)
-    if DeviceSourceType{i} ~= 2
+    if DeviceSourceType(i) ~= 2
         error(['Error']);
     end
 end
@@ -174,16 +185,16 @@ else
 fprintf('Adding voltage node...\n')
 
 for i = 1:(n_Ibus_1st-1)
-J{i} = DevicePara{i}.J;
-D{i} = DevicePara{i}.D;
+J{i} = DeviceParaNew{i}.J;
+D{i} = DeviceParaNew{i}.D;
 J{i} = J{i}*Wbase;
 D{i} = D{i}*Wbase;
 % Notes: Adding '*Wbase' is because the power swing equation rather than
 % the torque swing equation is used, and P=T*w0 if w is not in per unit
 % system.
 
-Lsg = DevicePara{i}.L;
-Rsg = DevicePara{i}.R;
+Lsg = DeviceParaNew{i}.L;
+Rsg = DeviceParaNew{i}.R;
 Zsg = s*Lsg + Rsg;
 Y_sg{i} = 1/Zsg;
 
@@ -236,13 +247,13 @@ fprintf('Adding current node...\n')
 % Get the inner loop parameters
 % Notes: Assume all inverters are same
 for i = n_Ibus_1st:(n_Fbus_1st-1)
-kp_i = DevicePara{i}.kp_i_dq;  
-ki_i = DevicePara{i}.ki_i_dq;
-Lf   = DevicePara{i}.L;
-Rf   = DevicePara{i}.R;
+kp_i = DeviceParaNew{i}.kp_i_dq;  
+ki_i = DeviceParaNew{i}.ki_i_dq;
+Lf   = DeviceParaNew{i}.L;
+Rf   = DeviceParaNew{i}.R;
 
-kp_pll{i} = DevicePara{i}.kp_pll;
-ki_pll{i} = DevicePara{i}.ki_pll;
+kp_pll{i} = DeviceParaNew{i}.kp_pll;
+ki_pll{i} = DeviceParaNew{i}.ki_pll;
 kp_pll{i} = kp_pll{i}/abs(P(i));
 ki_pll{i} = ki_pll{i}/abs(P(i));
 PI_pll{i} = kp_pll{i} + ki_pll{i}/s;
@@ -281,7 +292,7 @@ Y_inv_prime = (Y_inv_ - Y_inv)/(1i*dW);
 if Enable_CurrentNode_InnerLoop                                                 % ??? 
     
 for i = 1:N_Bus
-    if DeviceSourceType{i} == 2
+    if DeviceSourceType(i) == 2
         % Self branch
         Ybus(i,i) = Ybus(i,i) + Y_inv;
         Ybus_(i,i) = Ybus_(i,i) + Y_inv_;
@@ -344,9 +355,9 @@ S = conj(Input)*transpose(Input);
 
 % Get epsilon
 for i = 1:N_Bus
-    if DeviceSourceType{i} == 1
+    if DeviceSourceType(i) == 1
         epsilon(i) = 0;
-    elseif DeviceSourceType{i} == 2
+    elseif DeviceSourceType(i) == 2
         epsilon(i) = pi/2;
       	if real(I(i))>0
             epsilon(i) = -epsilon(i);
@@ -606,9 +617,9 @@ end
 % Get whole system Tss
 Tss = [[],[],[],[]];
 for i = 1:N_Bus
-    if DeviceSourceType{i} == 1
+    if DeviceSourceType(i) == 1
         Tss = append(Tss,T_V_ss);
-    elseif DeviceSourceType{i} == 2
+    elseif DeviceSourceType(i) == 2
         Tss = append(Tss,T_I_ss);
     else
         error(['Error']);
