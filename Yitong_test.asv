@@ -1,0 +1,23 @@
+% clear all
+% clc
+% close all
+% 
+% K = [1,-1;
+%      3,-3];
+% [phi,xi] = eig(K)
+
+% v1 = phi(1,:)
+% v2 = phi(2,:)
+% 
+% t1 = v2*transpose(v1)
+% t2 = v1*transpose(v1)
+% 
+% v1 = phi(:,1);
+% v2 = phi(:,2);
+% 
+% t1 = transpose(v1)*v1
+
+H_ = diag([1,1]);
+Hinv_ = inv(H_);
+KH_ = Hinv_*K
+[~,xi_] = eig(KH_)

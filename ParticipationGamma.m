@@ -1,0 +1,1 @@
+% Participation analysis of Gamma and sigma
