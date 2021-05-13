@@ -17,6 +17,9 @@
 % PowerFlow{1} = [-0.9, -1.4359, 1, 0,       pi*2*50];
 % PowerFlow{2} = [0.9,  -1.4359, 1, -2.0218, pi*2*50];
 % PowerFlowNew = PowerFlow;
+% PowerFlow{1} = [9, -14.359, 1, 0,       pi*2*50];
+% PowerFlow{2} = [-9,  -14.359, 1, 2.0218, pi*2*50];
+% PowerFlowNew = PowerFlow;
 
 % For printting later
 ListPowerFlow = SimplexPS.PowerFlow.Rearrange(PowerFlow);

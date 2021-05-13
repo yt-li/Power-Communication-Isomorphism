@@ -10,45 +10,29 @@ clc
 close all
 
 %% Select data
-
-% Single Machine
-% UserData = 'SingleSG.xlsx';     	% SG + resistive load
-% UserData = 'SingleIBR.xlsx';    	% IBR + resistive load
-
-% Nature example
 % UserData = 'Nature_NETS_NYPS_68Bus_original';
-% UserData = 'Nature_NETS_NYPS_68Bus_IBR_all';
-% UserData = 'Nature_NETS_NYPS_68Bus_1SG_OtherIBR';
 % UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
-% UserData = 'Nature_NETS_NYPS_68Bus_IBR';
-% UserData = 'Nature_NETS_NYPS_68Bus_IBR_v1';
-% UserData = 'Nature_NETS_NYPS_68Bus_original_TestReorder';
+UserData = '2MachineModel_test';
+% UserData = '3MachineModel_test_v3';
 
-% Test Power Flow
-% UserData = '3MachineModel_test';
-% UserData = '3MachineModel_test_v2';
-UserData = '3MachineModel_test_v3';
-% UserData = '3MachineModel_v1_3SG';
-% UserData = '3MachineModel_v2_SG_IBR_SG';
-% UserData = '3MachineModel_v3_SG_IBR_IBR';
-% UserData = '3MachineModel_v4_3IBR';
-% UserData = '2MachineModel_test';
+%% Enable settings
+Enable_VoltageNode_InnerLoop    = 0;    % Yes/No: star-delta conversion for flux inductance of voltage node
+Enable_CurrentNode_InnerLoop    = 0;    % Yes/No: inner-current loop impedance of current node
+  
+Enable_Plot_Poles               = 1;    % Yes/No: Plot poles of nature.
+Enable_Plot_ComparisonToolbox   = 0;    % Yes/No: Polt the poles of nature and toolbox.
+                                        % The poles of toolbox are saved in
+                                        % pole_sys.mat in the folder.
+                                        % The matching between toolbox and
+                                        % nature has been valided a lot of
+                                        % times. We can assume the nature
+                                        % results are right.
 
-% UserData = 'IEEE_14Bus';
-% UserData = 'IEEE_30Bus';
-% UserData = 'IEEE_57Bus';
+Enable_Change_Q_Sign            = 0;    % Yes/No: change the sign of Q, epsilon_m = 90 or -90, for current node
 
-%% Enable
-Enable_VoltageNode_InnerLoop    = 0;
-Enable_CurrentNode_InnerLoop    = 0;
-
-Enable_Plot_Symbolic            = 0;
-Enable_Plot_Poles               = 1;
-Enable_Plot_ComparisonToolbox   = 1;
-
-Enable_Change_Q_Sign            = 0;
-
-Select_Iref              = 2;            % ???
+% Not useful for Gu
+Select_Ibus_Ref              	= 2;                                        % ???
+Enable_Plot_Symbolic            = 0;  
 
 %% Load data
 fprintf('Loading data...\n')
@@ -70,60 +54,27 @@ Ybus = YbusCalc_s_sym(ListLineNew,W0,'albe');
 %% Reorder the Data
 
 % Notes:
+%
 % In this code, the bus/node should be orderred in this sequence:
 % [all voltage nodes, all current nodes, all floating bus nodes], i.e.,
 % [v bus, ..., v bus, i bus, ..., i bus, f bus, ... f bus].
-% Hence, in this subsection, we re-order all data first to make sure that
-% this required sequence can be obtained. Noting that, the device data, the
-% power flow data, and the network line data should all be re-orderred.
+% Hence, in this subsection, we re-order the data obtained from excel
+% first, to make sure that this required sequence can be obtained. Noting
+% that, the device data, the power flow data, and the network line data
+% should all be re-orderred.
 %
 % Maybe in the end of this code, I should re-order the result back to its
 % original sequence.
 
-% Get the device source type:
-for i = 1:N_Bus
-    if DeviceType{i}==1
-      	DeviceSourceType(i) = 1;    % Voltage node
-    elseif DeviceType{i}==11
-    	DeviceSourceType(i) = 2;    % Current node
-    elseif DeviceType{i}==100       
-        DeviceSourceType(i) = 3;    % Floating node     
-    else
-     	error(['Error']);
-    end
-end
+ReorderData();
 
-% Based on the device source type, we get the new order
-Index_Vbus = find(DeviceSourceType == 1);
-Index_Ibus = find(DeviceSourceType == 2);
-Index_Fbus = find(DeviceSourceType == 3);
-Order_Old2New = [Index_Vbus,Index_Ibus,Index_Fbus]; % Convert old order to new
-for i = 1:N_Bus
-    Order_New2Old(Order_Old2New(i)) = i;            % Convert new order back to old
-end
+%% The Influence of Inner Loop on Ybus
+fprintf('Evaluating the influence of bus type on node admittance matrix...\n')
+% Notes:
+% You can ignore this whole section at this tage, because the inner loops
+% have been disabled for both voltage and current nodes, as set by enable
+% settings above.
 
-% Existance of Node
-if ~isempty(Index_Vbus); Exist_Vbus = 1; else; Exist_Vbus = 0; end
-if ~isempty(Index_Ibus); Exist_Ibus = 1; else; Exist_Ibus = 0; end
-if ~isempty(Index_Fbus); Exist_Fbus = 1; else; Exist_Fbus = 0; end
-
-% Re-order device source tyoe
-DeviceSourceType = DeviceSourceType(:,Order_Old2New);
-
-% Re-order power flow
-V = V(Order_Old2New,:);
-I = I(Order_Old2New,:);
-
-% Re-order nodal admittance matrix
-Ybus = Ybus(Order_Old2New,Order_Old2New);
-
-% Re-order device para
-for i = 1:N_Bus
-    DeviceTypeNew{i} = DeviceType{Order_Old2New(i)};
-    DeviceParaNew{i} = DevicePara{Order_Old2New(i)};
-end
-
-%% Apparatus Data
 % Nnotes:
 % Ybus should statisfy: I = Ybus*V
 
@@ -280,8 +231,6 @@ Rf   = DeviceParaNew{i}.R;
 % bandwidth is same to that of a v_q-PLL.
 kp_pll{i} = DeviceParaNew{i}.kp_pll;
 ki_pll{i} = DeviceParaNew{i}.ki_pll;
-%kp_pll{i} = kp_pll{i}/abs(P(i));                                                % ???????
-%ki_pll{i} = ki_pll{i}/abs(P(i));
 PI_pll{i} = kp_pll{i} + ki_pll{i}/s;
 
 end
@@ -330,9 +279,6 @@ end
 
 end
 
-% Notes:
-% Doing D-Y conversion first, add Yinv next???
-
 % =============================
 % Get the angles
 % =============================
@@ -346,6 +292,8 @@ fprintf('Calculating network matrix: K and Gamma...\n')
 
 % Convert the nodol admittance matrix to hybrid admittance/impedance matrix
 Gbus = HybridMatrixYZ(Ybus,n_Ibus_1st);
+
+% For numerically calculating Gbus_prime later
 Gbus_ = HybridMatrixYZ(Ybus_,n_Ibus_1st);
 Gbus_dwn = HybridMatrixYZ(Ybus_dwn,n_Ibus_1st);
 Gbus_dwm = HybridMatrixYZ(Ybus_dwm,n_Ibus_1st);
@@ -358,34 +306,37 @@ Gbus = -Gbus;  	% Change the power direction to load convention.
               	% Noting that this operation is different from Ybus
                 % = -Ybus if the system has current nodes. The current
                 % direction is not important actually.
+ang_Gbus_degree = angle(Gbus)/pi*180;
+                
+% For numerically calculating Gbus_prime
 Gbus_ = -Gbus_;
 Gbus_dwn = -Gbus_dwn;
 Gbus_dwm = -Gbus_dwm;
-    
+
 % Get G_prime
-% Notes: It is calculaed by numerical calculation
+% Notes: It is calculaed by numerical method
 if 1                                                                            % ???
-Gbus_prime = (Gbus_ - Gbus)/(1i*dW);  
+    Gbus_prime = (Gbus_ - Gbus)/(1i*dW);                % Consider 
 else
-Gbus_prime = (Gbus_dwn - Gbus)/(1i*dW) + (Gbus_dwm - Gbus)/(1i*dW);
+    Gbus_prime = (Gbus_dwn - Gbus)/(1i*dW) + (Gbus_dwm - Gbus)/(1i*dW);
 end
 
-% Notes:
-% Gbus should statisfy: Output = -Gbus*Input
-
-% Update input and output to network admittance/impedance matrix
+% Update input and output to network admittance/impedance matrix, i.e.,
+% Output = -Gbus*Input
 Input = [V(1:n_Ibus_1st-1);
          I(n_Ibus_1st:end)];
 Output = [I(1:n_Ibus_1st-1);
           V(n_Ibus_1st:end)];
-% S = conj(Input)*transpose(Input);
 InputNormalized = Input;        % Initialize
 for i = 1:length(Input)
-    if DeviceSourceType(i) == 2
+    if DeviceSourceType(i) == 2     % If current source, then normalize it
         InputNormalized(i,1) = Input(i)/abs(Input(i));
     end
 end
+
+% Get S matrix
 S = conj(InputNormalized)*transpose(Input);
+ang_S_degree = angle(S)/pi*180;
 
 % Get epsilon
 for i = 1:N_Bus
@@ -394,7 +345,7 @@ for i = 1:N_Bus
     elseif DeviceSourceType(i) == 2
         epsilon(i) = pi/2;
         if Enable_Change_Q_Sign                                                 % ??????
-            if real(I(i))>0                                                     
+            if real( I(i)*exp(-1i*angle(V(i))) )>0                                                     
                 epsilon(i) = -epsilon(i);
                 TestEpsilon1 = 1
                 i
@@ -433,15 +384,13 @@ for m = 1:N_Bus
     end
     K(m,m) = K_temp;
 end
-ang_G_degree = angle(Gbus)/pi*180;
-ang_S_degree = angle(S)/pi*180;
 K = double(K);
 K = -K;             % For negative feedback
 ang_K_degree = angle(K)/pi*180;
-[K11,K12,K21,K22] = BlockMatrix(K,n_Ibus_1st-1,n_Ibus_1st-1);
+[K11,K12,K21,K22] = PartitionMatrix(K,n_Ibus_1st-1,n_Ibus_1st-1);
 % Notes:
-% For single-machine-load system, i.e., a single bus system, K = 0, based
-% on equation (15) in the paper.
+% For single-machine-load system, i.e., a single bus system, K = 0. How to
+% understand this?
 
 % Get Gamma matrix
 for m = 1:N_Bus
@@ -453,48 +402,48 @@ end
 ang_Gamma_degraa = ang_Gamma/pi*180;
 Gamma = double(Gamma);
 Gamma = -Gamma;    % For negative feedback
-[Gamma11,Gamma12,Gamma21,Gamma22] = BlockMatrix(Gamma,n_Ibus_1st-1,n_Ibus_1st-1);
+[Gamma11,Gamma12,Gamma21,Gamma22] = PartitionMatrix(Gamma,n_Ibus_1st-1,n_Ibus_1st-1);
 
 % Notes:
 % K can be interpreted as the synchronizing torque coefficient, as dS is
 % proportional to K*dtheta. Gamma can be interpreted as the damping torque
 % coefficient, as dS is proportional to Gamma*dtheta.
 
-%% Apparatus Matrix
+%% Apparatus Matrix: T and H^{-1}
 fprintf('Calculating apparatus matrix...\n')
 
-% Initialize Hinv
+% Initialize inertia matrix
 Hinv = eye(N_Bus);      % Let Hinv be identity matrix initially
 
 % Notes
 % The representation of Hinv is very important, especially when considering
-% the whole system KH. But when seperately considerring KH_V and KH_I, the
-% inertia matrices of voltage and current sources will not influence each
-% other, e.g., Hinv_I will not influence K_V and Gamma_V. However, H_V >>
-% H_I should be valid so that the voltage loop is much slower than the
-% current loop.
+% the whole system KH. When seperately considerring KH_V and KH_I, H_V >>
+% H_I, or equivalently, Hinv_V << Hinv_I, should be valid so that the
+% voltage source is much slower than the current source.
 
 % Choose the reference node
-if Select_Iref == 1
-    n_i_ref = n_Ibus_1st;        % Select the first current node as the reference
-elseif Select_Iref == 2
-    n_i_ref = N_Bus;
+if Select_Ibus_Ref == 1
+    n_i_ref = n_Ibus_1st;  	% Select the first current node as the reference
+elseif Select_Ibus_Ref == 2
+    n_i_ref = N_Bus;        % Select the final current node as the reference
 else
     error(['Error;']);
 end
-n_v_ref = 1;               % Select the first voltage node as the reference
+n_v_ref = 1;                % Select the first voltage node as the reference
 
-% ### Voltage node
+% ================================
+% Voltage node
+% ================================
 if Exist_Vbus == 1
     
 % Symbolic transfer function form:
 % omega = 1/(D + J*s) * W;
 for i = 1:(n_Ibus_1st-1)
-T_V{i} = 1/(D{i}/J{i} + s);
+    T_V_sym{i} = 1/(D{i}/J{i} + s);         % All T_V{i} should be same
 end
-F_V = -s/T_V{n_v_ref};
+F_V_sym = -s/T_V_sym{n_v_ref};
 
-% Update Hinv
+% Update inertia matrix for voltage node
 for i = 1:(n_Ibus_1st-1)
     Hinv(i,i) = 1/J{i};
     Hinv(i,i) = double(Hinv(i,i));
@@ -518,15 +467,17 @@ T_V_ss = T_V_ss*J{n_v_ref};
 
 end
 
-% ### Current node
+% ================================
+% Current node
+% ================================
 if Exist_Ibus == 1
     
 % Symbolic transfer function form
 % omega = (kp_pll{i} + ki_pll{i}/s) * W
 for i = n_Ibus_1st:N_Bus
-    T_I{i} = (PI_pll{i})/ki_pll{i};
+    T_I_sym{i} = PI_pll{i}/ki_pll{i};       % All T_I{i} should be same
 end
-F_I = -s/T_I{n_i_ref};
+F_I_sym = -s/T_I_sym{n_i_ref};
 
 % Update Hinv for current node
 for i = n_Ibus_1st:N_Bus
@@ -568,23 +519,19 @@ Ci = [1,0,0;
 Di = [0;
       0];
 end
-
-T_I_ss = ss(Ai,Bi,Ci,Di)/ki_pll{n_i_ref};
-
-% Auto conversion of state space
-% T_I_ss = [SimplexPS.sym2ss(T_I);
-%           SimplexPS.sym2ss(T_I/s)];
+T_I_ss = ss(Ai,Bi,Ci,Di);
+T_I_ss = T_I_ss/ki_pll{n_i_ref};
 
 end
 
 %% Stability criterion
 fprintf('Calculating stability criterion...\n')
 KH = Hinv*K;
-[KH11,KH12,KH21,KH22] = BlockMatrix(KH,n_Ibus_1st-1,n_Ibus_1st-1);
+[KH11,KH12,KH21,KH22] = PartitionMatrix(KH,n_Ibus_1st-1,n_Ibus_1st-1);
 [phi,xi] = eig(KH);
 ParticipationK();
 GammaHphi = inv(phi)*Hinv*Gamma*phi;
-[GH11,GH12,GH21,GH22] = BlockMatrix(GammaHphi,n_Ibus_1st-1,n_Ibus_1st-1);
+[GH11,GH12,GH21,GH22] = PartitionMatrix(GammaHphi,n_Ibus_1st-1,n_Ibus_1st-1);
 [~,sigma,~] = svd(GammaHphi);
 sigma_max = max(max(sigma));
 if min( min( real(xi) ) )<-1e-4
@@ -624,7 +571,7 @@ else
     [~,sigma_V,~] = svd(GammaHphi_V);
 end
 sigma_V_max = max(max(sigma_V));
-[zeta_m_V,w_min_V] = CalcZeta(T_V{n_v_ref},diag(xi_V));
+[zeta_m_V,w_min_V] = CalcZeta(T_V_sym{n_v_ref},diag(xi_V));
 if min(min(real(xi_V)))<-1e-4
     fprintf(['Error: xi_V_min = ' num2str(min(min(real(xi_V)))) ' < 0.']);
 end
@@ -647,7 +594,7 @@ if Exist_Ibus == 1
     GammaHphi_I = inv(phi_I)*Hinv_I*Gamma_I*phi_I;
     [~,sigma_I,~] = svd(GammaHphi_I);
     sigma_I_max = max(max(sigma_I));
-    [zeta_m_I,w_min_I] = CalcZeta(T_I{n_i_ref},diag(xi_I));
+    [zeta_m_I,w_min_I] = CalcZeta(T_I_sym{n_i_ref},diag(xi_I));
   	if min(min(real(xi_I)))<-1e-4
         fprintf(['Error: xi_I_min = ' num2str(min(min(real(xi_I)))) ' < 0.\n']);
     end
@@ -688,30 +635,10 @@ pole_sys_T12cl = pole(T12cl)/2/pi;
 fprintf('Plotting...\n')
 
 % Plot: symbolic
-if Enable_Plot_Symbolic
-
 figure_n = 0;
+PlotSymbolic();
 
-w_p = logspace(-1,1,500)*2*pi;
-w_pn = [-flip(w_p),w_p];
-s_pn = 1i*w_pn;
-
-if Exist_Vbus == 1
-figure_n = figure_n+1;
-figure(figure_n)
-SimplexPS.nyquist_c(F_V,s_pn);
-scatter(real(diag(xi_V)),imag(diag(xi_V)),'x','LineWidth',1.5); hold on; grid on;
-end
-if Exist_Ibus == 1
-figure_n = figure_n+1;
-figure(figure_n)
-SimplexPS.nyquist_c(F_I,s_pn);
-scatter(real(diag(xi_I)),imag(diag(xi_I)),'x','LineWidth',1.5); hold on; grid on;
-end
-
-end
-
-% Plot: state space
+% Plot: poles of state space system
 figure_n = 1000;
 
 if Enable_Plot_Poles
@@ -719,7 +646,7 @@ figure_n = figure_n+1;
 figure(figure_n)
 scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
 scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
-legend('L12','L1')
+legend('Loop12','Loop1')
 end
 
 if Enable_Plot_ComparisonToolbox

@@ -18,7 +18,7 @@
 %%
 function [G] = HybridMatrixYZ(Y,Ibus_1st)
 
-[Y11,Y12,Y21,Y22] = BlockMatrix(Y,Ibus_1st-1,Ibus_1st-1);
+[Y11,Y12,Y21,Y22] = PartitionMatrix(Y,Ibus_1st-1,Ibus_1st-1);
 
 G11 = Y11 - Y12*inv(Y22)*Y21;
 G12 = Y12*inv(Y22);
