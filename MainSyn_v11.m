@@ -10,30 +10,36 @@ clc
 close all
 
 %% Select data
+
+% Single Machine
+% UserData = 'SingleSG.xlsx';     	% SG + resistive load
+% UserData = 'SingleIBR.xlsx';    	% IBR + resistive load
+
+% Nature example
 % UserData = 'Nature_NETS_NYPS_68Bus_original';
+% UserData = 'Nature_NETS_NYPS_68Bus_IBR_all';
+% UserData = 'Nature_NETS_NYPS_68Bus_1SG_OtherIBR';
 % UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
-% UserData = '2MachineModel_test';
+% UserData = 'Nature_NETS_NYPS_68Bus_IBR';
+% UserData = 'Nature_NETS_NYPS_68Bus_IBR_v1';
+% UserData = 'Nature_NETS_NYPS_68Bus_original_TestReorder';
+
+% Test Power Flow
+% UserData = '3MachineModel_v1_test';
+% UserData = '3MachineModel_v1_3SG';
 UserData = '3MachineModel_test_v3';
+% UserData = '3MachineModel_v3_SG_IBR_IBR';
+% UserData = '3MachineModel_v4_3IBR';
+% UserData = '2MachineModel_test';
 
-%% Enable settings
-Enable_VoltageNode_InnerLoop    = 0;    % Yes/No: star-delta conversion for flux inductance of voltage node
-Enable_CurrentNode_InnerLoop    = 0;    % Yes/No: inner-current loop impedance of current node
-  
-Enable_Plot_Poles               = 1;    % Yes/No: Plot poles of nature.
-Enable_Plot_ComparisonToolbox   = 0;    % Yes/No: Polt the poles of nature and toolbox.
-                                        % The poles of toolbox are saved in
-                                        % pole_sys.mat in the folder.
-                                        % The matching between toolbox and
-                                        % nature has been valided a lot of
-                                        % times. We can assume the nature
-                                        % results are right.
+% UserData = 'IEEE_14Bus';
+% UserData = 'IEEE_30Bus';
+% UserData = 'IEEE_57Bus';
 
-Enable_vq_PLL                   = 1;    % Yes/No: change Q-PLL to vq-PLL
-Enable_Change_Q_Sign            = 0;    % Yes/No: change the sign of Q, epsilon_m = 90 or -90, for current node
-
-% Not useful for Gu
-Select_Ibus_Ref              	= 2;                                        % ???
-Enable_Plot_Symbolic            = 1;  
+%% Enable
+Enable_Plot_ComparisonToolbox   = 1;
+Enable_VoltageNode_InnerLoop    = 1;
+Enable_CurrentNode_InnerLoop    = 0;
 
 %% Load data
 fprintf('Loading data...\n')
@@ -55,27 +61,50 @@ Ybus = YbusCalc_s_sym(ListLineNew,W0,'albe');
 %% Reorder the Data
 
 % Notes:
-%
 % In this code, the bus/node should be orderred in this sequence:
 % [all voltage nodes, all current nodes, all floating bus nodes], i.e.,
 % [v bus, ..., v bus, i bus, ..., i bus, f bus, ... f bus].
-% Hence, in this subsection, we re-order the data obtained from excel
-% first, to make sure that this required sequence can be obtained. Noting
-% that, the device data, the power flow data, and the network line data
-% should all be re-orderred.
+% Hence, in this subsection, we re-order all data first to make sure that
+% this required sequence can be obtained. Noting that, the device data, the
+% power flow data, and the network line data should all be re-orderred.
 %
 % Maybe in the end of this code, I should re-order the result back to its
 % original sequence.
 
-ReorderData();
+% Get the device source type:
+for i = 1:N_Bus
+    if DeviceType{i}==1
+      	DeviceSourceType(i) = 1;    % Voltage node
+    elseif DeviceType{i}==11
+    	DeviceSourceType(i) = 2;    % Current node
+    elseif DeviceType{i}==100       
+        DeviceSourceType(i) = 3;    % Floating node     
+    else
+     	error(['Error']);
+    end
+end
+Index_Vbus = find(DeviceSourceType == 1);
+Index_Ibus = find(DeviceSourceType == 2);
+Index_Fbus = find(DeviceSourceType == 3);
+NewOrder = [Index_Vbus,Index_Ibus,Index_Fbus];
 
-%% The Influence of Inner Loop on Ybus
-fprintf('Evaluating the influence of bus type on node admittance matrix...\n')
-% Notes:
-% You can ignore this whole section at this tage, because the inner loops
-% have been disabled for both voltage and current nodes, as set by enable
-% settings above.
+% Re-order device source tyoe
+DeviceSourceType = DeviceSourceType(:,NewOrder);
 
+% Re-order power flow
+V = V(NewOrder,:);
+I = I(NewOrder,:);
+
+% Re-order nodal admittance matrix
+Ybus = Ybus(NewOrder,NewOrder);
+
+% Re-order device para
+for i = 1:N_Bus
+    DeviceTypeNew{i} = DeviceType{NewOrder(i)};
+    DeviceParaNew{i} = DevicePara{NewOrder(i)};
+end
+
+%% Apparatus Data
 % Nnotes:
 % Ybus should statisfy: I = Ybus*V
 
@@ -128,7 +157,7 @@ end
 % Notes:
 % The floating bus (i.e., no device bus) is assumed as zero-current bus,
 % and eliminated here after converting the Y matrix to Y-Z hybrid matrix.
-if Exist_Fbus == 0
+if n_Fbus_1st>N_Bus
     fprintf('Warning: The system has no floating node.\n')
 else
     
@@ -150,7 +179,7 @@ end
 % =============================
 % Add voltage node
 % =============================
-if Exist_Vbus == 0
+if n_Ibus_1st == 1
     fprintf('Warning: The system has no voltage node.\n')
 else
 fprintf('Adding voltage node...\n')
@@ -160,9 +189,9 @@ J{i} = DeviceParaNew{i}.J;
 D{i} = DeviceParaNew{i}.D;
 J{i} = J{i}*Wbase;
 D{i} = D{i}*Wbase;
-% Notes: 
-% Adding '*Wbase' is because the power swing equation rather than the
-% torque swing equation is used, and P=T*w0 if w is not in per unit system.
+% Notes: Adding '*Wbase' is because the power swing equation rather than
+% the torque swing equation is used, and P=T*w0 if w is not in per unit
+% system.
 
 Lsg = DeviceParaNew{i}.L;
 Rsg = DeviceParaNew{i}.R;
@@ -209,30 +238,29 @@ Ybus_dwm = Ybus_;
 % =============================
 % Add current node
 % =============================
-if Exist_Ibus == 0
+if n_Ibus_1st>N_Bus
     fprintf('Warning: The system has no current node.\n')
 else
 
 fprintf('Adding current node...\n')
 
 % Get the inner loop parameters
-
+% Notes: Assume all inverters are same
 for i = n_Ibus_1st:(n_Fbus_1st-1)
-
-% Notes: 
-% All inverters have same current controllers
 kp_i = DeviceParaNew{i}.kp_i_dq;  
 ki_i = DeviceParaNew{i}.ki_i_dq;
 Lf   = DeviceParaNew{i}.L;
 Rf   = DeviceParaNew{i}.R;
 
-% Notes:
-% Inverters have different PLL controllers. Because we use Q-PLL later, we
-% scale PI_pll here by P (approximately id) to ensure the actual PLL
-% bandwidth is same to that of a v_q-PLL.
 kp_pll{i} = DeviceParaNew{i}.kp_pll;
 ki_pll{i} = DeviceParaNew{i}.ki_pll;
+kp_pll{i} = kp_pll{i}/abs(P(i));
+ki_pll{i} = ki_pll{i}/abs(P(i));
 PI_pll{i} = kp_pll{i} + ki_pll{i}/s;
+
+% Notes:
+% Because we use Q-PLL later, we scale PI_pll here by P (approximately
+% id) to ensure the actual PLL bandwidth is same to that of a v_q-PLL.
 
 end
 
@@ -241,6 +269,7 @@ wm = sym('wm');
 % alpha/beta
 Z_PIi = kp_i + ki_i/(s-1i*wm);        
 Z_Lf = s*Lf+Rf;
+% ki_i = ki_i*5;                                                                 % ??????
 Y_inv = (s-1i*wm)/((kp_i + s*Lf+Rf)*(s-1i*wm) + ki_i);
 
 Y_inv_dwn = subs(Y_inv,'wm',W0);
@@ -280,21 +309,14 @@ end
 
 end
 
-% =============================
-% Get the angles
-% =============================
-ang_V = angle(V);
-ang_V_degree = ang_V/pi*180;
-ang_I = angle(I);
-ang_I_degree = ang_I/pi*180;
+% Notes:
+% Doing D-Y conversion first, add Yinv next???
 
-%% Network matrix: K and Gamma
-fprintf('Calculating network matrix: K and Gamma...\n')
+%% Network matrix
+fprintf('Calculating network matrix...\n')
 
 % Convert the nodol admittance matrix to hybrid admittance/impedance matrix
 Gbus = HybridMatrixYZ(Ybus,n_Ibus_1st);
-
-% For numerically calculating Gbus_prime later
 Gbus_ = HybridMatrixYZ(Ybus_,n_Ibus_1st);
 Gbus_dwn = HybridMatrixYZ(Ybus_dwn,n_Ibus_1st);
 Gbus_dwm = HybridMatrixYZ(Ybus_dwm,n_Ibus_1st);
@@ -307,37 +329,29 @@ Gbus = -Gbus;  	% Change the power direction to load convention.
               	% Noting that this operation is different from Ybus
                 % = -Ybus if the system has current nodes. The current
                 % direction is not important actually.
-ang_Gbus_degree = angle(Gbus)/pi*180;
-                
-% For numerically calculating Gbus_prime
 Gbus_ = -Gbus_;
 Gbus_dwn = -Gbus_dwn;
 Gbus_dwm = -Gbus_dwm;
-
+    
 % Get G_prime
-% Notes: It is calculaed by numerical method
+% Notes: It is calculaed by numerical calculation
 if 1                                                                            % ???
-    Gbus_prime = (Gbus_ - Gbus)/(1i*dW);                % Consider 
+Gbus_prime = (Gbus_ - Gbus)/(1i*dW);  
 else
-    Gbus_prime = (Gbus_dwn - Gbus)/(1i*dW) + (Gbus_dwm - Gbus)/(1i*dW);
+Gbus_prime = (Gbus_dwn - Gbus)/(1i*dW) + (Gbus_dwm - Gbus)/(1i*dW);
 end
 
-% Update input and output to network admittance/impedance matrix, i.e.,
-% Output = -Gbus*Input
+% Notes:
+% Gbus should statisfy: Output = -Gbus*Input
+
+% Update input and output to network admittance/impedance matrix
 Input = [V(1:n_Ibus_1st-1);
          I(n_Ibus_1st:end)];
 Output = [I(1:n_Ibus_1st-1);
           V(n_Ibus_1st:end)];
-InputNormalized = Input;        % Initialize
-for i = 1:length(Input)
-    if DeviceSourceType(i) == 2     % If current source, then normalize it
-        InputNormalized(i,1) = Input(i)/abs(Input(i));
-    end
-end
-
+   
 % Get S matrix
-S = conj(InputNormalized)*transpose(Input);
-ang_S_degree = angle(S)/pi*180;
+S = conj(Input)*transpose(Input);
 
 % Get epsilon
 for i = 1:N_Bus
@@ -345,19 +359,9 @@ for i = 1:N_Bus
         epsilon(i) = 0;
     elseif DeviceSourceType(i) == 2
         epsilon(i) = pi/2;
-        % epsilon(i) = -pi/2;
-        if Enable_vq_PLL
-            theta_i = angle(-I(i));
-            theta_v = angle(V(i));
-            epsilon(i) = pi/2 - (theta_i-theta_v);
-        end
-        if Enable_Change_Q_Sign                                                 % ??????
-            % if real(I(i))>0
-            if real( I(i)*exp(-1i*angle(V(i))) )>0                                                     
-                epsilon(i) = -epsilon(i);
-                TestEpsilon1 = 1
-                i
-            end
+      	if real(I(i))>0
+            epsilon(i) = -epsilon(i);
+            test1 = 1
         end
     else
         error(['Error']);
@@ -373,6 +377,10 @@ end
 % stability. Noting that Q is in load convention, so, id should also be
 % load convention. That means, when I>0 which means the IBR is generating
 % active power, the sign of epsilon should be changed.
+
+% For test                                                                      % ??????
+% epsilon(2) = -epsilon(2)
+% test2 = 1
 
 % Get K matrix
 for m = 1:N_Bus
@@ -392,15 +400,13 @@ for m = 1:N_Bus
     end
     K(m,m) = K_temp;
 end
+% K = vpa(K);
 K = double(K);
-K = -K;                             % For negative feedback
-K_sy = 1/2*(K+transpose(K));        % Symmetric part
-K_asy = 1/2*(K-transpose(K));       % Asymmetric part
-ang_K_degree = angle(K)/pi*180;
+K = -K;             % For negative feedback
 [K11,K12,K21,K22] = PartitionMatrix(K,n_Ibus_1st-1,n_Ibus_1st-1);
 % Notes:
-% For single-machine-load system, i.e., a single bus system, K = 0. How to
-% understand this?
+% For single-machine-load system, i.e., a single bus system, K = 0, based
+% on equation (15) in the paper.
 
 % Get Gamma matrix
 for m = 1:N_Bus
@@ -409,7 +415,7 @@ for m = 1:N_Bus
         Gamma(m,n) = abs(S(m,n))*abs(Gbus_prime(m,n))*sin(ang_Gamma(m,n));
     end
 end
-ang_Gamma_degraa = ang_Gamma/pi*180;
+% Gamma = vpa(Gamma);
 Gamma = double(Gamma);
 Gamma = -Gamma;    % For negative feedback
 [Gamma11,Gamma12,Gamma21,Gamma22] = PartitionMatrix(Gamma,n_Ibus_1st-1,n_Ibus_1st-1);
@@ -419,45 +425,31 @@ Gamma = -Gamma;    % For negative feedback
 % proportional to K*dtheta. Gamma can be interpreted as the damping torque
 % coefficient, as dS is proportional to Gamma*dtheta.
 
-%% Apparatus Matrix: T and H^{-1}
+%% Apparatus Matrix
 fprintf('Calculating apparatus matrix...\n')
 
-% Initialize inertia matrix
+% Initialize Hinv
 Hinv = eye(N_Bus);      % Let Hinv be identity matrix initially
 
-% Notes
-% The representation of Hinv is very important, especially when considering
-% the whole system KH. When seperately considerring KH_V and KH_I, H_V >>
-% H_I, or equivalently, Hinv_V << Hinv_I, should be valid so that the
-% voltage source is much slower than the current source.
-
 % Choose the reference node
-if Select_Ibus_Ref == 1
-    n_i_ref = n_Ibus_1st;  	% Select the first current node as the reference
-elseif Select_Ibus_Ref == 2
-    n_i_ref = N_Bus;        % Select the final current node as the reference
-else
-    error(['Error;']);
-end
-n_v_ref = 1;                % Select the first voltage node as the reference
+n_i_ref = n_Ibus_1st;        % Select the first current node as the reference
+n_v_ref = 1;               % Select the first voltage node as the reference
 
-% ================================
-% Voltage node
-% ================================
-if Exist_Vbus == 1
-    
-% Update inertia matrix for voltage node
-for i = 1:(n_Ibus_1st-1)
-    Hinv(i,i) = 1/J{i};
-    Hinv(i,i) = double(Hinv(i,i));
-end
+% ### Voltage node
+if n_Ibus_1st ~= 1
     
 % Symbolic transfer function form:
 % omega = 1/(D + J*s) * W;
 for i = 1:(n_Ibus_1st-1)
-    T_V_sym{i} = 1/(D{i}/J{i} + s);         % All T_V{i} should be same
+T_V{i} = 1/(D{i} + J{i}*s);
 end
-F_V_sym = -s/T_V_sym{n_v_ref};
+F_V = -s/T_V{n_v_ref};
+
+% Update Hinv
+for i = 1:(n_Ibus_1st-1)
+    Hinv(i,i) = 1/(J{i}/J{n_v_ref});
+    Hinv(i,i) = double(Hinv(i,i));
+end
 
 % State space form:
 % dx/dt = [domega]/dt = [-D/J,0]*[omega] + [1/J]*[W];
@@ -473,31 +465,32 @@ Cv = [1,0;
 Dv = [0;
       0];
 T_V_ss = ss(Av,Bv,Cv,Dv);
-T_V_ss = T_V_ss*J{n_v_ref};
+
+% Auto conversion of state space
+% T_V_ss = [SimplexPS.sym2ss(T_V);
+%           SimplexPS.sym2ss(T_V/s)];
 
 end
 
-% ================================
-% Current node
-% ================================
-if Exist_Ibus == 1
-    
-% Update Hinv for current node
-for i = n_Ibus_1st:N_Bus
-    Hinv(i,i) = ki_pll{i};
-    Hinv(i,i) = double(Hinv(i,i));
-end
+% ### Current node
+if n_Ibus_1st<=N_Bus
     
 % Symbolic transfer function form
 % omega = (kp_pll{i} + ki_pll{i}/s) * W
 for i = n_Ibus_1st:N_Bus
-    T_I_sym{i} = PI_pll{i}/ki_pll{i};       % All T_I{i} should be same
+    T_I{i} = PI_pll{i};
 end
-F_I_sym = -s/T_I_sym{n_i_ref};
+F_I = -s/T_I{n_i_ref};
+
+% Update Hinv for current node
+for i = n_Ibus_1st:N_Bus
+    Hinv(i,i) = kp_pll{i}/kp_pll{n_i_ref};
+    Hinv(i,i) = double(Hinv(i,i));
+end
 
 % State space form
 if 1                                                                          % ???
-% Without PLL LPF
+% Without LPF
 % dx/dt = [dw_pll_i]/dt = [0 ,0]*[w_pll_i] + [ki]*[W]
 %         [dtheta  ]      [1, 0] [theta  ]   [kp]
 % y = [omega] = [1, 0]*[w_pll_i] + [kp]*[W]
@@ -511,7 +504,7 @@ Ci = [1, 0;
 Di = [kp_pll{n_i_ref};
       0];
 else
-% With PLL LPF
+% With LPF
 % dx/dt = [dw      ]/dt
 %         [dw_pll_i]
 %         [dtheta  ]
@@ -529,25 +522,26 @@ Ci = [1,0,0;
 Di = [0;
       0];
 end
+
 T_I_ss = ss(Ai,Bi,Ci,Di);
-T_I_ss = T_I_ss/ki_pll{n_i_ref};
+
+% Auto conversion of state space
+% T_I_ss = [SimplexPS.sym2ss(T_I);
+%           SimplexPS.sym2ss(T_I/s)];
 
 end
 
 %% Stability criterion
 fprintf('Calculating stability criterion...\n')
 KH = Hinv*K;
-KH_sy = 1/2*(KH+transpose(KH));        % Symmetric part
-KH_asy = 1/2*(KH - transpose(KH));     % Asymmetric part
 [KH11,KH12,KH21,KH22] = PartitionMatrix(KH,n_Ibus_1st-1,n_Ibus_1st-1);
 [phi,xi] = eig(KH);
-ParticipationK();
-GammaHphi = inv(phi)*Hinv*Gamma*phi;
-[GH11,GH12,GH21,GH22] = PartitionMatrix(GammaHphi,n_Ibus_1st-1,n_Ibus_1st-1);
-[~,sigma,~] = svd(GammaHphi);
+Gamma_Hphi = inv(phi)*Hinv*Gamma*phi;
+[GH11,GH12,GH21,GH22] = PartitionMatrix(Gamma_Hphi,n_Ibus_1st-1,n_Ibus_1st-1);
+[~,sigma,~] = svd(Gamma_Hphi);
 sigma_max = max(max(sigma));
 if min( min( real(xi) ) )<-1e-4
-    fprintf(['Warning: Min(Real(xi)) = ' num2str(min(min(real(xi)))) ' < 0.\n']);
+    fprintf(['Error: Min(Real(xi)) = ' num2str(min(min(real(xi)))) ' < 0.\n']);
 end
 
 % Notes:
@@ -567,25 +561,26 @@ end
 % be seperate directly from the whole system KH and Gamma_Hphi.
 
 % ### Voltage node
-if Exist_Vbus == 1
+% This calculation might also be wrong! Because H is not eye matrix now!        	???  
+if n_Ibus_1st~= 1
 if isempty(KH22)
     KH_V = KH;
     [phi_V,xi_V] = eig(KH_V);
-    GammaHphi_V = GammaHphi;
-    [~,sigma_V,~] = svd(GammaHphi_V);
+    Gamma_Hphi_V = Gamma_Hphi;
+    [~,sigma_V,~] = svd(Gamma_Hphi_V);
 else
     K_V = K11 - K12*inv(K22)*K21;
     Gamma_V =  Gamma11 - K12*inv(K22)*Gamma21;
     Hinv_V = Hinv(1:(n_Ibus_1st-1),1:(n_Ibus_1st-1));
     KH_V = Hinv_V*K_V;
     [phi_V,xi_V] = eig(KH_V);
-    GammaHphi_V = inv(phi_V)*Hinv_V*Gamma_V*phi_V;
-    [~,sigma_V,~] = svd(GammaHphi_V);
+    Gamma_Hphi_V = inv(phi_V)*Hinv_V*Gamma_V*phi_V;
+    [~,sigma_V,~] = svd(Gamma_Hphi_V);
 end
 sigma_V_max = max(max(sigma_V));
-[zeta_m_V,w_min_V] = CalcZeta(T_V_sym{n_v_ref},diag(xi_V));
+[zeta_m_V,w_min_V] = CalcZeta(T_V{n_v_ref},diag(xi_V));
 if min(min(real(xi_V)))<-1e-4
-    fprintf(['Warning: xi_V_min = ' num2str(min(min(real(xi_V)))) ' < 0.']);
+    fprintf(['Error: xi_V_min = ' num2str(min(min(real(xi_V)))) ' < 0.']);
 end
 else
 	xi_V = [];
@@ -594,8 +589,9 @@ else
     w_min_V = [];
 end
 
-% ### Current node 
-if Exist_Ibus == 1
+% ### Current node
+% This calculation might be wrong!                                                      ???  
+if n_Ibus_1st<=N_Bus
     % KH_I = K22;
     % Gamma_Hphi_I = GH22;
     K_I = K22;
@@ -603,12 +599,12 @@ if Exist_Ibus == 1
     Hinv_I = Hinv(n_Ibus_1st:N_Bus,n_Ibus_1st:N_Bus);
     KH_I = Hinv_I*K_I;
     [phi_I,xi_I] = eig(KH_I);
-    GammaHphi_I = inv(phi_I)*Hinv_I*Gamma_I*phi_I;
-    [~,sigma_I,~] = svd(GammaHphi_I);
+    Gamma_Hphi_I = inv(phi_I)*Hinv_I*Gamma_I*phi_I;
+    [~,sigma_I,~] = svd(Gamma_Hphi_I);
     sigma_I_max = max(max(sigma_I));
-    [zeta_m_I,w_min_I] = CalcZeta(T_I_sym{n_i_ref},diag(xi_I));
+    [zeta_m_I,w_min_I] = CalcZeta(T_I{n_i_ref},diag(xi_I));
   	if min(min(real(xi_I)))<-1e-4
-        fprintf(['Warning: xi_I_min = ' num2str(min(min(real(xi_I)))) ' < 0.\n']);
+        fprintf(['Error: xi_I_min = ' num2str(min(min(real(xi_I)))) ' < 0.\n']);
     end
 else
     xi_I = [];
@@ -643,23 +639,39 @@ T12cl = minreal(T12cl);
 pole_sys_T1cl = pole(T1cl)/2/pi;
 pole_sys_T12cl = pole(T12cl)/2/pi;
 
-%% Plot
-fprintf('Plotting...\n')
+%% Plot: symbolic
 
-% Plot: symbolic
+if 0
+
 figure_n = 0;
-PlotSymbolic();
 
-% Plot: poles of state space system
+w_p = logspace(-1,1,500)*2*pi;
+w_pn = [-flip(w_p),w_p];
+s_pn = 1i*w_pn;
+
+figure_n = figure_n+1;
+figure(figure_n)
+SimplexPS.nyquist_c(F_V,s_pn);
+scatter(real(diag(xi_V)),imag(diag(xi_V)),'x','LineWidth',1.5); hold on; grid on;
+
+if n_Ibus_1st<=N_Bus
+figure_n = figure_n+1;
+figure(figure_n)
+SimplexPS.nyquist_c(F_I,s_pn);
+scatter(real(diag(xi_I)),imag(diag(xi_I)),'x','LineWidth',1.5); hold on; grid on;
+end
+
+end
+
+%% Plot: state space
+
 figure_n = 1000;
 
-if Enable_Plot_Poles
 figure_n = figure_n+1;
 figure(figure_n)
 scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
 scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
-legend('Loop12','Loop1')
-end
+legend('L12','L1')
 
 if Enable_Plot_ComparisonToolbox
 figure_n = figure_n+1;
@@ -668,8 +680,6 @@ scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on;
 scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
 pole_sys_toolbox = load('pole_sys').pole_sys;
 index = find(abs(imag(pole_sys_toolbox))<35);
-pole_sys_toolbox = pole_sys_toolbox(index);
-index = find(real(pole_sys_toolbox)>-1e3);
 pole_sys_toolbox = pole_sys_toolbox(index);
 scatter(real(pole_sys_toolbox),imag(pole_sys_toolbox),'x','LineWidth',1.5); hold on; grid on;
 legend('Yunjie With F Shift','Yunjie Wihtout F Shift','Toolbox')
