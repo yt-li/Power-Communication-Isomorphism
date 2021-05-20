@@ -9,31 +9,40 @@ clear all
 clc
 close all
 
+fprintf('Changing the current folder to the nature folder...\n')
+mfile_name = mfilename('fullpath');
+[pathstr,~,~]  = fileparts(mfile_name);
+cd(pathstr);
+
 %% Select data
 % UserData = 'Nature_NETS_NYPS_68Bus_original';
 % UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
 % UserData = '2MachineModel_test';
 UserData = '3MachineModel_test_v3';
 
+%% Compare toolbox with nature
+Enable_ComparisonToolbox   = 0;    % Yes/No: Compare the toolbox with nature
+                                   % This enable index will also be used later when plotting
+                                   
+if Enable_ComparisonToolbox
+    SimplexPS.Toolbox.Main();
+    save('pole_sys.mat','pole_sys');
+    clc
+    close all
+end
+
 %% Enable settings
 Enable_VoltageNode_InnerLoop    = 0;    % Yes/No: star-delta conversion for flux inductance of voltage node
 Enable_CurrentNode_InnerLoop    = 0;    % Yes/No: inner-current loop impedance of current node
   
 Enable_Plot_Poles               = 1;    % Yes/No: Plot poles of nature.
-Enable_Plot_ComparisonToolbox   = 0;    % Yes/No: Polt the poles of nature and toolbox.
-                                        % The poles of toolbox are saved in
-                                        % pole_sys.mat in the folder.
-                                        % The matching between toolbox and
-                                        % nature has been valided a lot of
-                                        % times. We can assume the nature
-                                        % results are right.
 
 Enable_vq_PLL                   = 1;    % Yes/No: change Q-PLL to vq-PLL
 Enable_Change_Q_Sign            = 0;    % Yes/No: change the sign of Q, epsilon_m = 90 or -90, for current node
 
 % Not useful for Gu
 Select_Ibus_Ref              	= 2;                                        % ???
-Enable_Plot_Symbolic            = 1;  
+Enable_Plot_Symbolic            = 0;  
 
 %% Load data
 fprintf('Loading data...\n')
@@ -661,7 +670,7 @@ scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; g
 legend('Loop12','Loop1')
 end
 
-if Enable_Plot_ComparisonToolbox
+if Enable_ComparisonToolbox
 figure_n = figure_n+1;
 figure(figure_n)
 scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
