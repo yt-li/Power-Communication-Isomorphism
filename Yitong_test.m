@@ -1,6 +1,15 @@
-% clear all
-% clc
-% close all
+clear all
+clc
+close all
 
-K_sy = 1/2*(K+transpose(K))
-K_asy = 1/2*(K - transpose(K))
+X = [1,2,3,4,5,6];
+Y = [1,2,3,4,5];
+
+Z = [0,1,1,1,0,0;
+     0,1,0,1,1,0;
+     1,0,0,0,1,1;
+     0,1,0,1,1,0;
+     0,0,1,0,0,0];
+
+ figure(1)
+ contour(X,Y,Z,[1,1])

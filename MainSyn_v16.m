@@ -17,8 +17,10 @@ cd(pathstr);
 %% Select data
 % UserData = 'Nature_NETS_NYPS_68Bus_original';
 % UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
+% UserData = '2MachineModel_SG_IBR';
+UserData = '2MachineModel_2IBR';
 % UserData = '2MachineModel_test';
-UserData = '3MachineModel_test_v3';
+% UserData = '3MachineModel_test_v3';
 
 %% Compare toolbox with nature
 Enable_ComparisonToolbox   = 0;    % Yes/No: Compare the toolbox with nature
@@ -316,7 +318,7 @@ Gbus = -Gbus;  	% Change the power direction to load convention.
               	% Noting that this operation is different from Ybus
                 % = -Ybus if the system has current nodes. The current
                 % direction is not important actually.
-ang_Gbus_degree = angle(Gbus)/pi*180;
+ang_G_degree = angle(Gbus)/pi*180;
                 
 % For numerically calculating Gbus_prime
 Gbus_ = -Gbus_;
@@ -405,7 +407,7 @@ K = double(K);
 K = -K;                             % For negative feedback
 K_sy = 1/2*(K+transpose(K));        % Symmetric part
 K_asy = 1/2*(K-transpose(K));       % Asymmetric part
-ang_K_degree = angle(K)/pi*180;
+ang_K_degree = ang_K/pi*180;
 [K11,K12,K21,K22] = PartitionMatrix(K,n_Ibus_1st-1,n_Ibus_1st-1);
 % Notes:
 % For single-machine-load system, i.e., a single bus system, K = 0. How to
