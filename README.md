@@ -2,11 +2,13 @@
 
 This repository contains the data for the following paper:
 
-Yunjie Gu, Yitong Li, Timothy C. Green, ``The Nature of Synchronization in Power Systems: A Revelation from Communication Theory,'' ArXiv.
+Yunjie Gu, Yitong Li, Timothy C. Green, ``The Nature of Synchronization in Power Systems: Insights from Communication Theory,'' ArXiv.
 
 ## Main Function
 
-MainSyn_v16.m
+MainSyn.m
+
+MainContour.m
 
 ## Contact
 
