@@ -80,7 +80,7 @@ Ybus = YbusCalc_s_sym(ListLineNew,W0,'albe');
 % Maybe in the end of this code, I should also re-order the result back to
 % its original sequence.
 
-ReorderData;
+ReorderData();
 
 %% The Influence of Inner Loop on Ybus
 fprintf('Evaluating the influence of bus type on node admittance matrix...\n')
@@ -106,8 +106,9 @@ Ybus = double(subs(Ybus,'s',1i*W0));
 % =============================
 % Plot Graph
 % =============================
+
 % Plot the graph of the original system
-PlotGraph;
+PlotGraph();
 
 % =============================
 % Find the node index
@@ -149,7 +150,7 @@ for i = n_Ibus_1st:(n_Fbus_1st-1)
 end
 
 % =============================
-% Handle floating node
+% Eliminate floating node
 % =============================
 % Notes:
 % The floating bus (i.e., no device bus) is assumed as zero-current bus,
@@ -173,21 +174,16 @@ Ybus_ = Ybus_(1:N_Bus,1:N_Bus);
 
 end
 
-% =============================
-% Plot Graph
-% =============================
 % Plot the graph after eliminating the floating nodes
-PlotGraph;
-
-stop
+PlotGraph();
 
 % =============================
-% Handle voltage node
+% Han voltage node
 % =============================
 if Exist_Vbus == 0
     fprintf('Warning: The system has no voltage node.\n')
 else
-fprintf('Handling voltage node...\n')
+fprintf('Adding voltage node...\n')
 
 for i = 1:(n_Ibus_1st-1)
 J{i} = DeviceParaNew{i}.J;

@@ -1,3 +1,6 @@
+% This function re-orders the system apparatus data, so that it can follow
+% this format: voltage node, current node, floating node
+
 % Get the device source type:
 for i = 1:N_Bus
     if DeviceType{i}==1

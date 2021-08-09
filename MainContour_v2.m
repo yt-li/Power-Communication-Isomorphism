@@ -1,4 +1,5 @@
-% This function is used to plot the wb-lambda contour
+% This function is used to plot the wb-lambda contour: i.e., the
+% trace of lambda when fixing wb to different values.
 
 % Author(s): Yitong Li, Yunjie Gu
 
@@ -39,17 +40,3 @@ y_vec = linspace(-AxisScale,AxisScale,NumPoint);
 y_vec = flip(y_vec);
 ConMat = GetContourMatrix(fb,x_vec,y_vec);
 contour(x_vec,y_vec,ConMat,[1,1]); grid on; hold on;
-
-stop
-
-%% Output
-Mag_F_Value;
-Mag_F_Sign
-
-Ang_F_Value1;
-Ang_F_Value2;
-Ang_F_Sign
-
-
-F_Sign
-F_Plot
