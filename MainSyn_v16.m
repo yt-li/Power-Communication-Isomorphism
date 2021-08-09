@@ -9,22 +9,22 @@ clear all
 clc
 close all
 
-fprintf('Changing the current folder to the nature folder...\n')
+fprintf('Changing the current folder ...\n')
 mfile_name = mfilename('fullpath');
 [pathstr,~,~]  = fileparts(mfile_name);
 cd(pathstr);
 
 %% Select data
-% UserData = 'Nature_NETS_NYPS_68Bus_original';
-UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
+UserData = 'Nature_NETS_NYPS_68Bus_original';
+% UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
 % UserData = '2MachineModel_SG_IBR';
 % UserData = '2MachineModel_2IBR';
 % UserData = '2MachineModel_test';
 % UserData = '3MachineModel_test_v3';
 
 %% Compare toolbox with nature
-Enable_ComparisonToolbox   = 0;    % Yes/No: Compare the toolbox with nature
-                                   % This enable index will also be used later when plotting
+Enable_ComparisonToolbox   = 1;    % Yes/No: Compare the toolbox with nature
+                                   % This enable value will also be used later when plotting
                                    
 if Enable_ComparisonToolbox
     SimplexPS.Toolbox.Main();
@@ -34,7 +34,7 @@ if Enable_ComparisonToolbox
 end
 
 %% Enable settings
-Enable_VoltageNode_InnerLoop    = 0;    % Yes/No: star-delta conversion for flux inductance of voltage node
+Enable_VoltageNode_InnerLoop    = 1;    % Yes/No: star-delta conversion for flux inductance of voltage node
 Enable_CurrentNode_InnerLoop    = 0;    % Yes/No: inner-current loop impedance of current node
   
 Enable_Plot_Poles               = 1;    % Yes/No: Plot poles of nature.
@@ -172,14 +172,6 @@ Ybus = Ybus(1:N_Bus,1:N_Bus);
 Ybus_ = Ybus_(1:N_Bus,1:N_Bus);
 
 end
-
-% =============================
-% Plot Graph
-% =============================
-% Plot the graph after eliminating the floating nodes
-PlotGraph;
-
-stop
 
 % =============================
 % Handle voltage node
@@ -321,6 +313,12 @@ ang_V = angle(V);
 ang_V_degree = ang_V/pi*180;
 ang_I = angle(I);
 ang_I_degree = ang_I/pi*180;
+
+% =============================
+% Plot Graph
+% =============================
+% Plot the graph after handling different nodes
+PlotGraph;
 
 %% Network matrix: K and Gamma
 fprintf('Calculating network matrix: K and Gamma...\n')
