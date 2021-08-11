@@ -15,8 +15,8 @@ mfile_name = mfilename('fullpath');
 cd(pathstr);
 
 %% Select data
-UserData = 'Nature_NETS_NYPS_68Bus_original';
-% UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
+% UserData = 'Nature_NETS_NYPS_68Bus_original';
+UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
 % UserData = '2MachineModel_SG_IBR';
 % UserData = '2MachineModel_2IBR';
 % UserData = '2MachineModel_test';
@@ -40,7 +40,7 @@ Enable_CurrentNode_InnerLoop    = 0;    % Yes/No: inner-current loop impedance o
 Enable_Plot_Poles               = 1;    % Yes/No: Plot poles of nature.
 
 Enable_vq_PLL                   = 1;    % Yes/No: change Q-PLL to vq-PLL
-Enable_Change_Q_Sign            = 0;    % Yes/No: change the sign of Q, epsilon_m = 90 or -90, for current node
+Enable_Change_Sign_PLL        	= 0;    % Yes/No: change the sign of Q, epsilon_m = 90 or -90, for current node
 
 % Not useful for Gu
 Select_Ibus_Ref              	= 2;                                        % ???
@@ -253,9 +253,11 @@ Lf   = DeviceParaNew{i}.L;
 Rf   = DeviceParaNew{i}.R;
 
 % Notes:
-% Inverters have different PLL controllers. Because we use Q-PLL later, we
-% scale PI_pll here by P (approximately id) to ensure the actual PLL
-% bandwidth is same to that of a v_q-PLL.
+% The bandwidth of vq-PLL and Q-PLL would be different, because Q is
+% proportional to id*vq. If we want to ensure the vq-PLL bandwidth of
+% different inverters to be same, there Q-PLL bandwidth would probably be
+% different because of different id output or active power output. We
+% ensure the vq-PLL bandwidth here.
 kp_pll{i} = DeviceParaNew{i}.kp_pll;
 ki_pll{i} = DeviceParaNew{i}.ki_pll;
 PI_pll{i} = kp_pll{i} + ki_pll{i}/s;
@@ -374,37 +376,41 @@ ang_S_degree = angle(S)/pi*180;
 % Get epsilon
 for i = 1:N_Bus
     if DeviceSourceType(i) == 1
-        epsilon(i) = 0;
+        epsilon(i) = 0;         % W = P
     elseif DeviceSourceType(i) == 2
-        epsilon(i) = pi/2;
-        % epsilon(i) = -pi/2;
+        epsilon(i) = pi/2;      % W = Q
+        % epsilon(i) = -pi/2;   % W = -Q
+        
         if Enable_vq_PLL
             theta_i = angle(-I(i));
             theta_v = angle(V(i));
-            epsilon(i) = pi/2 - (theta_i-theta_v);
+            epsilon(i) = pi/2 - (theta_i-theta_v);  
+            % Here, we change the Q direction to vq direction.
         end
-        if Enable_Change_Q_Sign                                                 % ??????
+        
+        if Enable_Change_Sign_PLL                                                 % ??????
             % if real(I(i))>0
             if real( I(i)*exp(-1i*angle(V(i))) )>0                                                     
                 epsilon(i) = -epsilon(i);
-                TestEpsilon1 = 1
-                i
             end
+            % Notes:
+            % For current node, conventional PLL uses vq rather than Q to
+            % achieve the synchronization. In load convention, Q = vq*id -
+            % vd*iq. If iq = 0, Q = vq*id if iq = 0. This means, the power
+            % flow id will influence the sign of Q, which also means the
+            % sign of loop gain also has to be changed to ensure the system
+            % stability. Here, we change the the value of epsilon_m
+            % depending on the power flow, to ensure xi>=0 and the
+            % stability. Noting that Q is in load convention, so, id should
+            % also be load convention. That means, when I>0 which means the
+            % IBR is generating active power, the sign of epsilon should be
+            % changed.
         end
     else
         error(['Error']);
     end
 end
-% Notes:
-% For current node, conventional PLL uses vq rather than Q to achieve the
-% synchronization. In load convention, Q = vq*id - vd*iq. If iq = 0, Q =
-% vq*id if iq = 0. That means, the power flow direction id will influence
-% the sign of Q, which also means the sign of loop gain also has to be
-% changed to ensure the system stability. Here, we change the the value of
-% epsilon_m depending on the power flow, to ensure xi >=0 and the
-% stability. Noting that Q is in load convention, so, id should also be
-% load convention. That means, when I>0 which means the IBR is generating
-% active power, the sign of epsilon should be changed.
+
 
 % Get K matrix
 for m = 1:N_Bus
@@ -480,6 +486,7 @@ if Exist_Vbus == 1
     
 % Update inertia matrix for voltage node
 for i = 1:(n_Ibus_1st-1)
+    % The inertia of a SG is J
     Hinv(i,i) = 1/J{i};
     Hinv(i,i) = double(Hinv(i,i));
 end
@@ -516,6 +523,7 @@ if Exist_Ibus == 1
     
 % Update Hinv for current node
 for i = n_Ibus_1st:N_Bus
+    % The inertia of an inverter is ki_pll.
     Hinv(i,i) = ki_pll{i};
     Hinv(i,i) = double(Hinv(i,i));
 end
@@ -568,10 +576,12 @@ end
 
 %% Stability criterion
 fprintf('Calculating stability criterion...\n')
+
 KH = Hinv*K;
 KH_sy = 1/2*(KH+transpose(KH));        % Symmetric part
 KH_asy = 1/2*(KH - transpose(KH));     % Asymmetric part
 [KH11,KH12,KH21,KH22] = PartitionMatrix(KH,n_Ibus_1st-1,n_Ibus_1st-1);
+
 [phi,xi] = eig(KH);
 ParticipationK();
 GammaHphi = inv(phi)*Hinv*Gamma*phi;
