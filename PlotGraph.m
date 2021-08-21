@@ -4,24 +4,19 @@
 BLUE = [0, 0.4470, 0.7410];
 RED = [0.8500, 0.3250, 0.0980];
 
-% Get the graph matrix
-GraphMatrix = NormMatrixElement(Ybus,'DiagFlag',0);
-
 % Plot the graph
-fig_n = fig_n + 1;
-figure(fig_n)
 GraphData = graph(GraphMatrix,'upper');
-GraphPlot = plot(GraphData);
+GraphFigure = plot(GraphData); grid on; hold on;
 
 % Change all edges and nodes to black first
-highlight(GraphPlot,GraphData,'EdgeColor','k','LineWidth',1);
-highlight(GraphPlot,GraphData,'NodeColor','k');
+highlight(GraphFigure,GraphData,'EdgeColor','k','LineWidth',1);
+highlight(GraphFigure,GraphData,'NodeColor','k');
 
 % Highlight the node types by colors
 IndexVoltageNode = find(DeviceSourceType == 1);
 IndexCurrentNode = find(DeviceSourceType == 2);
 IndexFloatingNode = find(DeviceSourceType == 3);
 
-highlight(GraphPlot,IndexVoltageNode,'NodeColor',BLUE);
-highlight(GraphPlot,IndexCurrentNode,'NodeColor',RED);
+highlight(GraphFigure,IndexVoltageNode,'NodeColor',BLUE);
+highlight(GraphFigure,IndexCurrentNode,'NodeColor',RED);
 % highlight(GraphPlot,IndexFloatingNode,'NodeColor','k');

@@ -16,14 +16,16 @@ cd(pathstr);
 
 %% Select data
 % UserData = 'Nature_NETS_NYPS_68Bus_original';
-UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
+% UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
+UserData = 'Nature_NETS_NYPS_68Bus_HybridSGIBR';
 % UserData = '2MachineModel_SG_IBR';
 % UserData = '2MachineModel_2IBR';
 % UserData = '2MachineModel_test';
 % UserData = '3MachineModel_test_v3';
+% UserData = '4ApparatusModel';
 
 %% Compare toolbox with nature
-Enable_ComparisonToolbox   = 1;    % Yes/No: Compare the toolbox with nature
+Enable_ComparisonToolbox   = 0;    % Yes/No: Compare the toolbox with nature
                                    % This enable value will also be used later when plotting
                                    
 if Enable_ComparisonToolbox
@@ -34,10 +36,10 @@ if Enable_ComparisonToolbox
 end
 
 %% Enable settings
-Enable_VoltageNode_InnerLoop    = 1;    % Yes/No: star-delta conversion for flux inductance of voltage node
+Enable_VoltageNode_InnerLoop    = 0;    % Yes/No: star-delta conversion for flux inductance of voltage node
 Enable_CurrentNode_InnerLoop    = 0;    % Yes/No: inner-current loop impedance of current node
   
-Enable_Plot_Poles               = 1;    % Yes/No: Plot poles of nature.
+Enable_Plot_Poles               = 1;    % Yes/No: Plot poles of nature method.
 
 Enable_vq_PLL                   = 1;    % Yes/No: change Q-PLL to vq-PLL
 Enable_Change_Sign_PLL        	= 0;    % Yes/No: change the sign of Q, epsilon_m = 90 or -90, for current node
@@ -55,6 +57,7 @@ LoadData();
 %% Power Flow
 fprintf('Doing power flow anlaysis...\n')
 PowerFlowCal();
+ListPowerFlowNew
 
 %% Nodal admittance matrix
 % Symbolic
@@ -107,7 +110,12 @@ Ybus = double(subs(Ybus,'s',1i*W0));
 % Plot Graph
 % =============================
 % Plot the graph of the original system
-PlotGraph;
+GraphMatrix = NormMatrixElement(Ybus,'DiagFlag',0);
+fig_n = fig_n + 1;
+figure(fig_n)
+PlotGraph();
+SaveGraphData{fig_n} = GraphData;
+SaveGraphFigure{fig_n} = GraphFigure;
 
 % =============================
 % Find the node index
@@ -315,12 +323,6 @@ ang_V = angle(V);
 ang_V_degree = ang_V/pi*180;
 ang_I = angle(I);
 ang_I_degree = ang_I/pi*180;
-
-% =============================
-% Plot Graph
-% =============================
-% Plot the graph after handling different nodes
-PlotGraph;
 
 %% Network matrix: K and Gamma
 fprintf('Calculating network matrix: K and Gamma...\n')
@@ -577,20 +579,48 @@ end
 %% Stability criterion
 fprintf('Calculating stability criterion...\n')
 
+% KH
 KH = Hinv*K;
-KH_sy = 1/2*(KH+transpose(KH));        % Symmetric part
-KH_asy = 1/2*(KH - transpose(KH));     % Asymmetric part
+KH_sy = 1/2*(KH+transpose(KH));         % Symmetric part
+KH_asy = 1/2*(KH - transpose(KH));      % Asymmetric part
 [KH11,KH12,KH21,KH22] = PartitionMatrix(KH,n_Ibus_1st-1,n_Ibus_1st-1);
+[phi,xi,psi] = eig(KH);                 % phi is the right eigenvector matrix, psi is the left eigenvector matrix, xi is the eigenvalue matrix. Noting that phi^(-1) can also be regarded as a left eigenvector matrix.
+phi_inv = phi^(-1);
+xi_diag = diag(xi)
+[xi_min,xi_min_index] = min( real(xi_diag) );
+% ParticipationK();
+fprintf(['KH stability: ']);
+if xi_min < -1e-20
+    fprintf(['unstable xi.\n']);
+    xi_min
+else
+    fprintf(['stable xi.\n']);
+end
+phi_r_min = phi(:,xi_min_index);
+phi_l_min = transpose(phi_inv(xi_min_index,:));
+FiedlerVec = phi_r_min.*phi_l_min
+FiedlerPositive = find(FiedlerVec>=0)
+FiedlerNegative = find(FiedlerVec<0)
+[~,FiedlerMinIndex] = min(FiedlerVec)
 
-[phi,xi] = eig(KH);
-ParticipationK();
+% Plot graph KH
+GraphMatrix = NormMatrixElement(KH,'DiagFlag',0);
+fig_n = fig_n + 1;
+figure(fig_n)
+PlotGraph();
+SaveGraphData{fig_n} = GraphData;
+SaveGraphFigure{fig_n} = GraphFigure;
+
+figure(2)
+plot([-1,1],[0,0])
+
+stop
+
+% GammaHphi
 GammaHphi = inv(phi)*Hinv*Gamma*phi;
 [GH11,GH12,GH21,GH22] = PartitionMatrix(GammaHphi,n_Ibus_1st-1,n_Ibus_1st-1);
 [~,sigma,~] = svd(GammaHphi);
 sigma_max = max(max(sigma));
-if min( min( real(xi) ) )<-1e-4
-    fprintf(['Warning: Min(Real(xi)) = ' num2str(min(min(real(xi)))) ' < 0.\n']);
-end
 
 % Notes:
 %
@@ -608,56 +638,7 @@ end
 % two subloops should be re-calculated based on K, Hinv, Gamma, and can not
 % be seperate directly from the whole system KH and Gamma_Hphi.
 
-% ### Voltage node
-if Exist_Vbus == 1
-if isempty(KH22)
-    KH_V = KH;
-    [phi_V,xi_V] = eig(KH_V);
-    GammaHphi_V = GammaHphi;
-    [~,sigma_V,~] = svd(GammaHphi_V);
-else
-    K_V = K11 - K12*inv(K22)*K21;
-    Gamma_V =  Gamma11 - K12*inv(K22)*Gamma21;
-    Hinv_V = Hinv(1:(n_Ibus_1st-1),1:(n_Ibus_1st-1));
-    KH_V = Hinv_V*K_V;
-    [phi_V,xi_V] = eig(KH_V);
-    GammaHphi_V = inv(phi_V)*Hinv_V*Gamma_V*phi_V;
-    [~,sigma_V,~] = svd(GammaHphi_V);
-end
-sigma_V_max = max(max(sigma_V));
-[zeta_m_V,w_min_V] = CalcZeta(T_V_sym{n_v_ref},diag(xi_V));
-if min(min(real(xi_V)))<-1e-4
-    fprintf(['Warning: xi_V_min = ' num2str(min(min(real(xi_V)))) ' < 0.']);
-end
-else
-	xi_V = [];
-    sigma_V = [];
-    zeta_m_V = [];
-    w_min_V = [];
-end
-
-% ### Current node 
-if Exist_Ibus == 1
-    % KH_I = K22;
-    % Gamma_Hphi_I = GH22;
-    K_I = K22;
-    Gamma_I = Gamma22;
-    Hinv_I = Hinv(n_Ibus_1st:N_Bus,n_Ibus_1st:N_Bus);
-    KH_I = Hinv_I*K_I;
-    [phi_I,xi_I] = eig(KH_I);
-    GammaHphi_I = inv(phi_I)*Hinv_I*Gamma_I*phi_I;
-    [~,sigma_I,~] = svd(GammaHphi_I);
-    sigma_I_max = max(max(sigma_I));
-    [zeta_m_I,w_min_I] = CalcZeta(T_I_sym{n_i_ref},diag(xi_I));
-  	if min(min(real(xi_I)))<-1e-4
-        fprintf(['Warning: xi_I_min = ' num2str(min(min(real(xi_I)))) ' < 0.\n']);
-    end
-else
-    xi_I = [];
-    sigma_I = [];
-    zeta_m_I = [];
-    w_min_I = [];
-end
+StabilityVoltageCurrent();
 
 %% Calculate the state space representation
 % Get whole system Tss
@@ -721,39 +702,8 @@ end
 % Criterion
 fprintf('Check the stability by the proposed criterion:\n')
 
-% Set the default values
-StableVoltageNode = 1;
-StableCurrentNode = 1;
-
-% Check voltage nodes
-if ~isempty(zeta_m_V)
-    if min(zeta_m_V)>=sigma_V_max
-        StableVoltageNode = 1;
-    else
-        StableVoltageNode = 0;
-    end
-end
-
-% Check current nodes
-if ~isempty(zeta_m_I)
-    if min(zeta_m_I)>=sigma_I_max
-        StableCurrentNode = 1;
-    else
-        StableCurrentNode = 0;
-    end
-end
-
-% Output
-if StableVoltageNode==1 && StableCurrentNode==1
-    fprintf('Stable!\n')
-else
- 	if StableVoltageNode==0
-        fprintf('Unstable voltage node!\n')
-    end
-    if StableCurrentNode==0
-        fprintf('Unstable current node!\n')
-    end
-end
+% Stability Check Voltage Current
+% StabilityCheckVoltageCurrent();
 
 % Pole
 fprintf('Check the stability by poles:\n')
