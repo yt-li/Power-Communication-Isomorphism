@@ -17,12 +17,12 @@ cd(pathstr);
 %% Select data
 % UserData = 'Nature_NETS_NYPS_68Bus_original';
 % UserData = 'Nature_NETS_NYPS_68Bus_2SG_OtherIBR';
-UserData = 'Nature_NETS_NYPS_68Bus_HybridSGIBR';
+% UserData = 'Nature_NETS_NYPS_68Bus_HybridSGIBR';
 % UserData = '2MachineModel_SG_IBR';
 % UserData = '2MachineModel_2IBR';
 % UserData = '2MachineModel_test';
 % UserData = '3MachineModel_test_v3';
-% UserData = '4ApparatusModel';
+UserData = '4ApparatusModel';
 
 %% Compare toolbox with nature
 Enable_ComparisonToolbox   = 0;    % Yes/No: Compare the toolbox with nature

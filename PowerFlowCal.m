@@ -1,7 +1,7 @@
 % ### Power flow analysis
-[PowerFlow,~,V_,I_,~,~,~,~] = SimplexPS.PowerFlow.PowerFlowGS(ListBus,ListLine,Wbase);
+% [PowerFlow,~,V_,I_,~,~,~,~] = PowerFlowGS(ListBus,ListLine,Wbase);
         % The Gauss-Seidel method is always used here.
-% [PowerFlow] = SimplexPS.PowerFlow.PowerFlowNR(ListBus,ListLine,Wbase);                      % ???
+[PowerFlow] = PowerFlowNR(ListBus,ListLine,Wbase);                      % ???
 % Form of PowerFlow{i}: P, Q, V, xi, w
 
 % Move load flow (PLi and QLi) to bus admittance matrix
