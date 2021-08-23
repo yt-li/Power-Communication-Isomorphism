@@ -30,6 +30,8 @@ pq = find(type == 3);               % PQ Buses..
 npv = length(pv);                   % No. of PV buses..
 npq = length(pq);                   % No. of PQ buses..
 
+PGain = 0.1;
+
 Tol = 1;  
 Iter = 1;
 while (Tol > 1e-5)   % Iteration starting..
@@ -42,20 +44,6 @@ while (Tol > 1e-5)   % Iteration starting..
             P(i) = P(i) + V(i)* V(k)*(G(i,k)*cos(del(i)-del(k)) + B(i,k)*sin(del(i)-del(k)));
             Q(i) = Q(i) + V(i)* V(k)*(G(i,k)*sin(del(i)-del(k)) - B(i,k)*cos(del(i)-del(k)));
         end
-    end
-
-    % Checking Q-limit violations..
-    if Iter <= 7 && Iter > 2    % Only checked up to 7th iterations..
-        for n = 2:nbus
-            if type(n) == 2
-                QG = Q(n)+Ql(n);
-                if QG < Qmin(n)
-                    V(n) = V(n) + 0.01;
-                elseif QG > Qmax(n)
-                    V(n) = V(n) - 0.01;
-                end
-            end
-         end
     end
     
     % Calculate change from specified value
@@ -70,108 +58,113 @@ while (Tol > 1e-5)   % Iteration starting..
         end
     end
     dP = dPa(2:nbus);
-    M = [dP; dQ];       % Mismatch Vector
+    M = [PGain*dP; dQ];           % Mismatch Vector
     
     % Jacobian
     % J1 - Derivative of Real Power Injections with Angles..
-    if Iter > 6e4
-        J1 = zeros(nbus-1,nbus-1);
-        for i = 1:(nbus-1)
-            m = i+1;
-            for k = 1:(nbus-1)
-                n = k+1;
-                if n == m
-                    for n = 1:nbus
-                        J1(i,k) = J1(i,k) + V(m)* V(n)*(-G(m,n)*sin(del(m)-del(n)) + B(m,n)*cos(del(m)-del(n)));
-                    end
-                    J1(i,k) = J1(i,k) - V(m)^2*B(m,m);
-                else
-                    J1(i,k) = V(m)* V(n)*(G(m,n)*sin(del(m)-del(n)) - B(m,n)*cos(del(m)-del(n)));
+    J1 = zeros(nbus-1,nbus-1);
+    for i = 1:(nbus-1)
+        m = i+1;
+        for k = 1:(nbus-1)
+            n = k+1;
+            if n == m
+                for n = 1:nbus
+                    J1(i,k) = J1(i,k) + V(m)* V(n)*(-G(m,n)*sin(del(m)-del(n)) + B(m,n)*cos(del(m)-del(n)));
                 end
+                J1(i,k) = J1(i,k) - V(m)^2*B(m,m);
+            else
+                J1(i,k) = V(m)* V(n)*(G(m,n)*sin(del(m)-del(n)) - B(m,n)*cos(del(m)-del(n)));
             end
         end
-
-        % J2 - Derivative of Real Power Injections with V..
-        J2 = zeros(nbus-1,npq);
-        for i = 1:(nbus-1)
-            m = i+1;
-            for k = 1:npq
-                n = pq(k);
-                if n == m
-                    for n = 1:nbus
-                        J2(i,k) = J2(i,k) + V(n)*(G(m,n)*cos(del(m)-del(n)) + B(m,n)*sin(del(m)-del(n)));
-                    end
-                    J2(i,k) = J2(i,k) + V(m)*G(m,m);
-                else
-                    J2(i,k) = V(m)*(G(m,n)*cos(del(m)-del(n)) + B(m,n)*sin(del(m)-del(n)));
-                end
-            end
-        end
-
-
-        % J3 - Derivative of Reactive Power Injections with Angles..
-        J3 = zeros(npq,nbus-1);
-        for i = 1:npq
-            m = pq(i);
-            for k = 1:(nbus-1)
-                n = k+1;
-                if n == m
-                    for n = 1:nbus
-                        J3(i,k) = J3(i,k) + V(m)* V(n)*(G(m,n)*cos(del(m)-del(n)) + B(m,n)*sin(del(m)-del(n)));
-                    end
-                    J3(i,k) = J3(i,k) - V(m)^2*G(m,m);
-                else
-                    J3(i,k) = V(m)* V(n)*(-G(m,n)*cos(del(m)-del(n)) - B(m,n)*sin(del(m)-del(n)));
-                end
-            end
-        end
-
-
-        % J4 - Derivative of Reactive Power Injections with V..
-        J4 = zeros(npq,npq);
-        for i = 1:npq
-            m = pq(i);
-            for k = 1:npq
-                n = pq(k);
-                if n == m
-                    for n = 1:nbus
-                        J4(i,k) = J4(i,k) + V(n)*(G(m,n)*sin(del(m)-del(n)) - B(m,n)*cos(del(m)-del(n)));
-                    end
-                    J4(i,k) = J4(i,k) - V(m)*B(m,m);
-                else
-                    J4(i,k) = V(m)*(G(m,n)*sin(del(m)-del(n)) - B(m,n)*cos(del(m)-del(n)));
-                end
-            end
-        end
-    else
-        scale = 1e-3;
-        J1 = eye(nbus-1) / scale;
-        J2 = zeros(nbus-1,npq);
-        J3 = zeros(npq,nbus-1);
-        J4 = eye(npq) / scale;
     end
-     
+    
+    % J2 - Derivative of Real Power Injections with V..
+    J2 = zeros(nbus-1,npq);
+    for i = 1:(nbus-1)
+        m = i+1;
+        for k = 1:npq
+            n = pq(k);
+            if n == m
+                for n = 1:nbus
+                    J2(i,k) = J2(i,k) + V(n)*(G(m,n)*cos(del(m)-del(n)) + B(m,n)*sin(del(m)-del(n)));
+                end
+                J2(i,k) = J2(i,k) + V(m)*G(m,m);
+            else
+                J2(i,k) = V(m)*(G(m,n)*cos(del(m)-del(n)) + B(m,n)*sin(del(m)-del(n)));
+            end
+        end
+    end
+    
+    % J3 - Derivative of Reactive Power Injections with Angles..
+    J3 = zeros(npq,nbus-1);
+    for i = 1:npq
+        m = pq(i);
+        for k = 1:(nbus-1)
+            n = k+1;
+            if n == m
+                for n = 1:nbus
+                    J3(i,k) = J3(i,k) + V(m)* V(n)*(G(m,n)*cos(del(m)-del(n)) + B(m,n)*sin(del(m)-del(n)));
+                end
+                J3(i,k) = J3(i,k) - V(m)^2*G(m,m);
+            else
+                J3(i,k) = V(m)* V(n)*(-G(m,n)*cos(del(m)-del(n)) - B(m,n)*sin(del(m)-del(n)));
+            end
+        end
+    end
+    
+    % J4 - Derivative of Reactive Power Injections with V..
+    J4 = zeros(npq,npq);
+    for i = 1:npq
+        m = pq(i);
+        for k = 1:npq
+            n = pq(k);
+            if n == m
+                for n = 1:nbus
+                    J4(i,k) = J4(i,k) + V(n)*(G(m,n)*sin(del(m)-del(n)) - B(m,n)*cos(del(m)-del(n)));
+                end
+                J4(i,k) = J4(i,k) - V(m)*B(m,m);
+            else
+                J4(i,k) = V(m)*(G(m,n)*sin(del(m)-del(n)) - B(m,n)*cos(del(m)-del(n)));
+            end
+        end
+    end
+    
     J = [J1 J2; J3 J4];     % Jacobian Matrix..
     
-%     if (Tol <= 0.02) && (Tol >= 1e-4)
-%         scale = 0.1;
-%     elseif (Tol <= 0.002) && (Tol >= 1e-4)
-%         scale = 1;
+%     Iterflag = 1;
+%     while (Iterflag)
+%         Lambda = eig(J);
+%         LambdaAbsMin = min(abs(Lambda));
+%         LambdaRealMin = min(real(Lambda));
+%         if LambdaRealMin > 0
+%             Iterflag = 0;
+%         elseif Iterflag == 1
+%             disp([LambdaRealMin Iter Iterflag]);
+%             J = blkdiag(J1,J4);
+%             Iterflag = 2;
+%             continue;
+%         elseif Iterflag == 2
+%             disp([LambdaRealMin Iter Iterflag]);
+%             break;
+%         end
 %     end
+
+    Lambda = eig(J);
+    LambdaAbsMin = min(abs(Lambda));
+    LambdaRealMin = min(real(Lambda));
+    if LambdaRealMin < 0
+        disp(['min(real(eig)) = ' num2str(LambdaRealMin) ', interation = ' num2str(Iter)]);
+    end
     
-    X = inv(J)*M;           % Correction Vector
+    Scale = 1/LambdaAbsMin;
+    J = Scale*J;
+    
+    X = (J^(-1))*M;           % Correction Vector
     dTh = X(1:nbus-1);      % Change in Voltage Angle..
     dV = X(nbus:end);       % Change in Voltage Magnitude..
     
     % Updating State Vectors..
     del(2:nbus) = dTh + del(2:nbus);    % Voltage Angle..
-    
-    try 
-        x = [x del/pi*180];
-    catch
-        x = [];
-    end
-    
     k = 1;
     for i = 2:nbus
         if type(i) == 3
@@ -187,7 +180,7 @@ end
 
 % [Pi,Qi] = LoadFlow(nbus,V,del,Sbase,Y,ListLine,ListBus);              % Calling Loadflow.m..
 Sbase = 1;               	% Base, which is set to 1 currently
-[Pi,Qi] = LoadFlow(nbus,V,del,Sbase,Y,ListLine,ListBus);              % Calling Loadflow.m..
+[Pi,Qi] = SimplexPS.PowerFlow.LoadFlow(nbus,V,del,Sbase,Y,ListLine,ListBus);              % Calling Loadflow.m..
 
 for i = 1:nbus
     PowerFlow{i} = [-Pi(i) -Qi(i) V(i) del(i) w0];
