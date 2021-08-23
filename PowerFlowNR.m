@@ -30,7 +30,7 @@ pq = find(type == 3);               % PQ Buses..
 npv = length(pv);                   % No. of PV buses..
 npq = length(pq);                   % No. of PQ buses..
 
-PGain = 0.1;
+PGain = 1;
 
 Tol = 1;  
 Iter = 1;
@@ -131,24 +131,26 @@ while (Tol > 1e-5)   % Iteration starting..
     
     J = [J1 J2; J3 J4];     % Jacobian Matrix..
     
-%     Iterflag = 1;
-%     while (Iterflag)
-%         Lambda = eig(J);
-%         LambdaAbsMin = min(abs(Lambda));
-%         LambdaRealMin = min(real(Lambda));
-%         if LambdaRealMin > 0
-%             Iterflag = 0;
-%         elseif Iterflag == 1
-%             disp([LambdaRealMin Iter Iterflag]);
-%             J = blkdiag(J1,J4);
-%             Iterflag = 2;
-%             continue;
-%         elseif Iterflag == 2
-%             disp([LambdaRealMin Iter Iterflag]);
-%             break;
-%         end
-%     end
+    %     % only use J1 and J4. not work. 
+    %     Iterflag = 1;
+    %     while (Iterflag)
+    %         Lambda = eig(J);
+    %         LambdaAbsMin = min(abs(Lambda));
+    %         LambdaRealMin = min(real(Lambda));
+    %         if LambdaRealMin > 0
+    %             Iterflag = 0;
+    %         elseif Iterflag == 1
+    %             disp([LambdaRealMin Iter Iterflag]);
+    %             J = blkdiag(J1,J4);
+    %             Iterflag = 2;
+    %             continue;
+    %         elseif Iterflag == 2
+    %             disp([LambdaRealMin Iter Iterflag]);
+    %             break;
+    %         end
+    %     end
 
+    % normalise the Jacobian
     Lambda = eig(J);
     LambdaAbsMin = min(abs(Lambda));
     LambdaRealMin = min(real(Lambda));
