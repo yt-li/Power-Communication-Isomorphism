@@ -31,6 +31,7 @@ Enable_ComparisonToolbox   = 0;    % Yes/No: Compare the toolbox with nature
 if Enable_ComparisonToolbox
     SimplexPS.Toolbox.Main();
     save('pole_sys.mat','pole_sys');
+    
     clc
     close all
 end
@@ -611,10 +612,8 @@ PlotGraph();
 SaveGraphData{fig_n} = GraphData;
 SaveGraphFigure{fig_n} = GraphFigure;
 
-figure(2)
-plot([-1,1],[0,0])
-
-stop
+% figure(2)
+% plot([-1,1],[0,0])
 
 % GammaHphi
 GammaHphi = inv(phi)*Hinv*Gamma*phi;
