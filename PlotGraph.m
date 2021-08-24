@@ -5,7 +5,3 @@ GraphData = graph(GraphMatrix,'upper');
 GraphFigure = plot(GraphData); grid on; hold on;
 highlight(GraphFigure,GraphData,'EdgeColor','k','LineWidth',1);     % Change all edges to black
 highlight(GraphFigure,GraphData,'NodeColor','k');
-
-% highlight(GraphFigure,IndexVoltageNode,'NodeColor',RgbBlue);
-% highlight(GraphFigure,IndexCurrentNode,'NodeColor',RgbRed);
-% highlight(GraphPlot,IndexFloatingNode,'NodeColor','k');

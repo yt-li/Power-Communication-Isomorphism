@@ -608,13 +608,13 @@ PowerFlowAngle = ListPowerFlowOrigin(:,5);
 KH_r = KH(1,:);
 KH_c = KH(:,1);
 KH_Vec = KH_c.*(KH_r');
-KH_VecAbs = abs(KH_Vec);
-[KH_min,KH_min_Index] = min(KH_VecAbs);
+[KH_min,KH_min_Index] = min(abs(KH_Vec));
 
 % Right eigenvector
-phi_r_min = phi(:,xi_min_index);
-PhiRightPositive = find(phi_r_min>=0);
-PhiRightNegative = find(phi_r_min<0);
+phi_r_xi = phi(:,xi_min_index);
+% phi_r_xi = phi_r_xi(Order_New2Old_NoFbus,1);
+PhiRightPositive = find(phi_r_xi>=0);
+PhiRightNegative = find(phi_r_xi<0);
 
 GraphMatrix = NormMatrixElement(YbusOrigin,'DiagFlag',0);
 fig_n = fig_n + 1;
@@ -627,9 +627,10 @@ highlight(GraphFigure,PhiRightPositive,'NodeColor',RgbYellow);
 highlight(GraphFigure,PhiRightNegative,'NodeColor',RgbGreen);
 
 % Left eigenvector
-phi_l_min = transpose(phi_inv(xi_min_index,:));
-PhiLeftPositive = find(phi_l_min>=0);
-PhiLeftNegative = find(phi_l_min<0);
+phi_l_xi = transpose(phi_inv(xi_min_index,:));
+% phi_l_xi = phi_l_xi(Order_New2Old,1);
+PhiLeftPositive = find(phi_l_xi>=0);
+PhiLeftNegative = find(phi_l_xi<0);
 
 GraphMatrix = NormMatrixElement(YbusOrigin,'DiagFlag',0);
 fig_n = fig_n + 1;
@@ -642,7 +643,7 @@ highlight(GraphFigure,PhiLeftPositive,'NodeColor',RgbYellow);
 highlight(GraphFigure,PhiLeftNegative,'NodeColor',RgbGreen);
 
 % Fiedler vector
-FiedlerVec = phi_r_min.*phi_l_min;
+FiedlerVec = phi_r_xi.*phi_l_xi;
 FiedlerVecAbs = abs(FiedlerVec)
 FiedlerPositive = find(FiedlerVec>=0);
 FiedlerNegative = find(FiedlerVec<0);

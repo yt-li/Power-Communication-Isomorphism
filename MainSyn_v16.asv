@@ -58,7 +58,6 @@ LoadData();
 %% Power Flow
 fprintf('Doing power flow anlaysis...\n')
 PowerFlowCal();
-ListPowerFlowOrigin([Order_New2Ol],:)
 
 %% Nodal admittance matrix
 % Symbolic
@@ -444,9 +443,6 @@ for m = 1:N_Bus
 end
 K = double(K);
 K = -K;                             % For negative feedback
-K_sy = 1/2*(K+transpose(K));        % Symmetric part
-K_asy = 1/2*(K-transpose(K));       % Asymmetric part
-ang_K_degree = ang_K/pi*180;
 [K11,K12,K21,K22] = PartitionMatrix(K,n_Ibus_1st-1,n_Ibus_1st-1);
 % Notes:
 % For single-machine-load system, i.e., a single bus system, K = 0. How to
@@ -459,7 +455,6 @@ for m = 1:N_Bus
         Gamma(m,n) = abs(S(m,n))*abs(Gbus_prime(m,n))*sin(ang_Gamma(m,n));
     end
 end
-ang_Gamma_degraa = ang_Gamma/pi*180;
 Gamma = double(Gamma);
 Gamma = -Gamma;    % For negative feedback
 [Gamma11,Gamma12,Gamma21,Gamma22] = PartitionMatrix(Gamma,n_Ibus_1st-1,n_Ibus_1st-1);
@@ -591,8 +586,6 @@ fprintf('Calculating stability criterion...\n')
 
 % KH
 KH = Hinv*K;
-KH_sy = 1/2*(KH+transpose(KH));         % Symmetric part
-KH_asy = 1/2*(KH - transpose(KH));      % Asymmetric part
 [KH11,KH12,KH21,KH22] = PartitionMatrix(KH,n_Ibus_1st-1,n_Ibus_1st-1);
 [phi,xi,psi] = eig(KH);                 % phi is the right eigenvector matrix, psi is the left eigenvector matrix, xi is the eigenvalue matrix. Noting that phi^(-1) can also be regarded as a left eigenvector matrix.
 phi_inv = phi^(-1);
@@ -607,20 +600,21 @@ else
 end
 
 % Power Flow Analysis
-PowerFlowAngle = ListPowerFlowNew(:,5);
+ListPowerFlowOrigin = ListPowerFlowNew(Order_New2Old,:);
+PowerFlowAngle = ListPowerFlowOrigin(:,5);
 [PowerFlowAngleMax,PowerFlowAngleMaxIndex] = max(abs(PowerFlowAngle));
 
 % KH analysis
 KH_r = KH(1,:);
 KH_c = KH(:,1);
 KH_Vec = KH_c.*(KH_r');
-KH_VecAbs = abs(KH_Vec);
-[KH_min,KH_min_Index] = min(KH_VecAbs);
+[KH_min,KH_min_Index] = min(abs(KH_Vec));
 
 % Right eigenvector
-phi_r_min = phi(:,xi_min_index);
-PhiRightPositive = find(phi_r_min>=0);
-PhiRightNegative = find(phi_r_min<0);
+phi_r_xi = phi(:,xi_min_index);
+phi_r_xi = phi_r_xi(Order_New2Old_NoFbus,1);
+PhiRightPositive = find(phi_r_xi>=0);
+PhiRightNegative = find(phi_r_xi<0);
 
 GraphMatrix = NormMatrixElement(YbusOrigin,'DiagFlag',0);
 fig_n = fig_n + 1;
@@ -633,9 +627,10 @@ highlight(GraphFigure,PhiRightPositive,'NodeColor',RgbYellow);
 highlight(GraphFigure,PhiRightNegative,'NodeColor',RgbGreen);
 
 % Left eigenvector
-phi_l_min = transpose(phi_inv(xi_min_index,:));
-PhiLeftPositive = find(phi_l_min>=0);
-PhiLeftNegative = find(phi_l_min<0);
+phi_l_xi = transpose(phi_inv(xi_min_index,:));
+phi_l_xi = phi_l_xi(Order_New2Old_NoFbus,1);
+PhiLeftPositive = find(phi_l_xi>=0);
+PhiLeftNegative = find(phi_l_xi<0);
 
 GraphMatrix = NormMatrixElement(YbusOrigin,'DiagFlag',0);
 fig_n = fig_n + 1;
@@ -648,7 +643,7 @@ highlight(GraphFigure,PhiLeftPositive,'NodeColor',RgbYellow);
 highlight(GraphFigure,PhiLeftNegative,'NodeColor',RgbGreen);
 
 % Fiedler vector
-FiedlerVec = phi_r_min.*phi_l_min;
+FiedlerVec = phi_r_xi.*phi_l_xi;
 FiedlerVecAbs = abs(FiedlerVec)
 FiedlerPositive = find(FiedlerVec>=0);
 FiedlerNegative = find(FiedlerVec<0);
