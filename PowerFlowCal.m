@@ -1,30 +1,14 @@
 % ### Power flow analysis
 % [PowerFlow,~,V_,I_,~,~,~,~] = PowerFlowGS(ListBus,ListLine,Wbase);
-        % The Gauss-Seidel method is always used here.
-[PowerFlow] = PowerFlowNR(ListBus,ListLine,Wbase);                      % ???
+[PowerFlow] = PowerFlowNR(ListBus,ListLine,Wbase);
 % Form of PowerFlow{i}: P, Q, V, xi, w
 
 % Move load flow (PLi and QLi) to bus admittance matrix
 [ListBus,ListLineNew,PowerFlowNew] = SimplexPS.PowerFlow.Load2SelfBranch(ListBus,ListLine,PowerFlow);
 
-% ### For >90 test                                                                  % ??????
-% Load convention
-% wL = 0.1
-% PowerFlow{1} = [-9, -14.359, 1, 0,       pi*2*50];
-% PowerFlow{2} = [9,  -14.359, 1, -2.0218, pi*2*50];
-% PowerFlowNew = PowerFlow;
-% wL = 1
-% PowerFlow{1} = [-0.9, -1.4359, 1, 0,       pi*2*50];
-% PowerFlow{2} = [0.9,  -1.4359, 1, -2.0218, pi*2*50];
-% PowerFlowNew = PowerFlow;
-% PowerFlow{1} = [9, -14.359, 1, 0,       pi*2*50];
-% PowerFlow{2} = [-9,  -14.359, 1, 2.0218, pi*2*50];
-% PowerFlowNew = PowerFlow;
-
 % For printting later
 ListPowerFlow = SimplexPS.PowerFlow.Rearrange(PowerFlow);
 ListPowerFlowNew = SimplexPS.PowerFlow.Rearrange(PowerFlowNew);
-P = ListPowerFlowNew(:,2);
 
 % Update V and I
 [V,I] = PowerFlowUpdateVI(PowerFlowNew);
