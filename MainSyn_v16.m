@@ -11,8 +11,9 @@ close all
 
 fprintf('Changing the current folder ...\n')
 mfile_name = mfilename('fullpath');
-[pathstr,~,~]  = fileparts(mfile_name);
-cd(pathstr);
+[RootPath,~,~]  = fileparts(mfile_name);
+cd(RootPath);
+addpath(genpath([RootPath,'/Functions']));
 
 ColorRGB();
 
@@ -20,9 +21,9 @@ ColorRGB();
 % UserData = 'Nature_NETS_NYPS_68Bus_original';
 % UserData = 'Nature_NETS_NYPS_68Bus_HybridSGIBR';
 % UserData = '4ApparatusModel';
-% UserData = '68Bus';
-% UserData = '68Bus_SG_IBR_PassiveLoad';
-UserData = '68Bus_SG_IBR';
+% UserData = '68Bus_SG_PassiveLoad';
+UserData = '68Bus_SG_IBR_PassiveLoad';
+% UserData = '68Bus_SG_IBR';
 
 %% Compare toolbox with nature
 Enable_ComparisonToolbox   = 0;    % Yes/No: Compare the toolbox with nature
@@ -48,6 +49,9 @@ Enable_Change_Sign_PLL        	= 0;    % Yes/No: change the sign of Q, epsilon_m
 % Not useful for Gu
 Select_Ibus_Ref              	= 2;                                        % ???
 Enable_Plot_Symbolic            = 0;  
+
+% Enable plot
+Enable_SavePlot                 = 1;
 
 fig_n = 0;
 
@@ -160,6 +164,10 @@ highlight(GraphFigure,Index_Vbus,'NodeColor',RgbBlue);
 highlight(GraphFigure,Index_Ibus,'NodeColor',RgbRed);
 SaveGraphData{fig_n} = GraphData;
 SaveGraphFigure{fig_n} = GraphFigure;
+if Enable_SavePlot
+    print(gcf,'Graph_68Bus.png','-dpng','-r600');
+end
+
 
 % =============================
 % Handle floating node
@@ -714,12 +722,15 @@ feedout_L1 = [1:N_Bus]*2;
 feedout_L2 = [1:N_Bus]*2-1;
 T1cl = feedback(Tss*Hinv,K,feedin,feedout_L1);
 T12cl = feedback(T1cl,Gamma,feedin,feedout_L2);
-T1cl = minreal(T1cl);
-T12cl = minreal(T12cl);
+% T1cl = minreal(T1cl);
+% T12cl = minreal(T12cl);
 
 % Calculate the whole system pole
 pole_sys_T1cl = pole(T1cl)/2/pi;
 pole_sys_T12cl = pole(T12cl)/2/pi;
+
+[~,eig_sys] = eig(T12cl.A);
+eig_sys = diag(eig_sys)/2/pi;
 
 %% Plot
 fprintf('Plotting...\n')
@@ -734,7 +745,8 @@ figure_n = 1000;
 if Enable_Plot_Poles
 figure_n = figure_n+1;
 figure(figure_n)
-scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
+% scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
+scatter(real(eig_sys),imag(eig_sys),'x','LineWidth',1.5); hold on; grid on;
 scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
 legend('Loop12','Loop1')
 end
