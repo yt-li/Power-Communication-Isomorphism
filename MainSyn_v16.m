@@ -1,10 +1,9 @@
+% This is the main function for analying the power grids by
+% power-communication-isomorphism.
+
 % Author(s): Yitong Li, Yunjie Gu
 
-%% Notes
-%
-% Devices should be listed in the same order as the bus.
-
-%% Clear
+%% Prepare
 clear all
 clc
 close all
@@ -15,45 +14,51 @@ mfile_name = mfilename('fullpath');
 cd(RootPath);
 addpath(genpath([RootPath,'/Functions']));
 
+%% Get color RGB
 ColorRGB();
 
 %% Select data
+% UserData = '68Bus_SG_PassiveLoad';
+% UserData = '68Bus_SG_IBR_PassiveLoad';
+UserData = '68Bus_SG_IBR';
+
+% Backup:
 % UserData = 'Nature_NETS_NYPS_68Bus_original';
 % UserData = 'Nature_NETS_NYPS_68Bus_HybridSGIBR';
 % UserData = '4ApparatusModel';
-% UserData = '68Bus_SG_PassiveLoad';
-UserData = '68Bus_SG_IBR_PassiveLoad';
-% UserData = '68Bus_SG_IBR';
 
 %% Compare toolbox with nature
-Enable_ComparisonToolbox   = 0;    % Yes/No: Compare the toolbox with nature
-                                   % This enable value will also be used later when plotting
+Enable_ComparisonToolbox   = 0;         % 1/0: Compare the toolbox with nature
+                                        % This enable value will also be used later when plotting
                                    
 if Enable_ComparisonToolbox
     SimplexPS.Toolbox.Main();
     save('pole_sys.mat','pole_sys');
-    
+    clear all
     clc
     close all
 end
 
 %% Enable settings
-Enable_VoltageNode_InnerLoop    = 1;    % Yes/No: star-delta conversion for flux inductance of voltage node
-Enable_CurrentNode_InnerLoop    = 1;    % Yes/No: inner-current loop impedance of current node
-  
-Enable_Plot_Poles               = 1;    % Yes/No: Plot poles of nature method.
+Enable_VoltageNode_InnerLoop    = 1;    % 1/0: star-delta conversion for flux inductance of voltage node
+Enable_CurrentNode_InnerLoop    = 1;    % 1/0: inner-current loop impedance of current node
 
-Enable_vq_PLL                   = 1;    % Yes/No: change Q-PLL to vq-PLL
-Enable_Change_Sign_PLL        	= 0;    % Yes/No: change the sign of Q, epsilon_m = 90 or -90, for current node
+Enable_vq_PLL                   = 1;    % 1/0: change Q-PLL to vq-PLL
+Enable_Change_Sign_PLL        	= 0;    % 1/0: change the sign of Q, epsilon_m = 90 or -90, for current node
 
-% Not useful for Gu
 Select_Ibus_Ref              	= 2;                                        % ???
-Enable_Plot_Symbolic            = 0;  
 
 % Enable plot
-Enable_SavePlot                 = 1;
+Enable_Plot_Symbolic            = 0;  
+Enable_Plot_Eigenvalue          = 1;    % 1/0: Plot eigenvalues.
+Enable_Plot_GraphOrigin         = 1;    % 1/0: Plot the graph of the original power system
+Enable_Plot_GraphKH             = 0;    % 1/0: Plot the graph for KH
+Enable_Plot_GraphAnalysis       = 0;    % 1/0: Plot the graph for analysis
 
-fig_n = 0;
+Enable_SavePlot                 = 0;
+
+% Initialize figure index
+Fig_N = 0;
 
 %% Load data
 fprintf('Loading data...\n')
@@ -152,20 +157,22 @@ end
 % =============================
 % Plot Graph
 % =============================
+if Enable_Plot_GraphOrigin
 YbusOrigin = Ybus(Order_New2Old,Order_New2Old);
 GraphMatrix = NormMatrixElement(YbusOrigin,'DiagFlag',0);
-fig_n = fig_n + 1;
-figure(fig_n)
+Fig_N = Fig_N + 1;
+figure(Fig_N)
 GraphData = graph(GraphMatrix,'upper');
 GraphFigure = plot(GraphData); grid on; hold on;
 highlight(GraphFigure,GraphData,'EdgeColor','k','LineWidth',1);     % Change all edges nodes to black
 highlight(GraphFigure,GraphData,'NodeColor','k');
 highlight(GraphFigure,Index_Vbus,'NodeColor',RgbBlue);
 highlight(GraphFigure,Index_Ibus,'NodeColor',RgbRed);
-SaveGraphData{fig_n} = GraphData;
-SaveGraphFigure{fig_n} = GraphFigure;
+SaveGraphData{Fig_N} = GraphData;
+SaveGraphFigure{Fig_N} = GraphFigure;
 if Enable_SavePlot
     print(gcf,'Graph_68Bus.png','-dpng','-r600');
+end
 end
 
 
@@ -222,7 +229,7 @@ Y_sg{i} = double(subs(Y_sg{i},'s',1i*W0));
 end    
 
 % Doing D-Y conversion
-if Enable_VoltageNode_InnerLoop                                           	% ??? 
+if Enable_VoltageNode_InnerLoop
 
 % Prepare star-delta conversion by adding new buses
 Ybus = PrepareConvertDY(Ybus,n_Ibus_1st,N_Bus,Y_sg);
@@ -390,7 +397,11 @@ for i = 1:length(Input)
 end
 
 % Get S matrix
-S = conj(InputNormalized)*transpose(Input);
+if Enable_vq_PLL
+    S = conj(InputNormalized)*transpose(Input);
+else
+    S = conj(Input)*transpose(Input)
+end
 ang_S_degree = angle(S)/pi*180;
 
 % Get epsilon
@@ -399,13 +410,11 @@ for i = 1:N_Bus
         epsilon(i) = 0;         % W = P
     elseif DeviceSourceType(i) == 2
         epsilon(i) = pi/2;      % W = Q
-        % epsilon(i) = -pi/2;   % W = -Q
         
         if Enable_vq_PLL
             theta_i = angle(-I(i));
             theta_v = angle(V(i));
-            epsilon(i) = pi/2 - (theta_i-theta_v);  
-            % Here, we change the Q direction to vq direction.
+            epsilon(i) = pi/2 - (theta_i-theta_v);      % The Q direction is changed to vq direction.
         end
         
         if Enable_Change_Sign_PLL                                             
@@ -618,21 +627,31 @@ KH_c = KH(:,1);
 KH_Vec = KH_c.*(KH_r');
 [KH_min,KH_min_Index] = min(abs(KH_Vec));
 
+if Enable_Plot_GraphKH
+GraphMatrix = NormMatrixElement(KH,'DiagFlag',0);
+fig_n = fig_n + 1;
+figure(fig_n)
+PlotGraph();
+SaveGraphData{fig_n} = GraphData;
+SaveGraphFigure{fig_n} = GraphFigure;
+end
+
 % Right eigenvector
 phi_r_xi = phi(:,xi_min_index);
 % phi_r_xi = phi_r_xi(Order_New2Old_NoFbus,1);
 PhiRightPositive = find(phi_r_xi>=0);
 PhiRightNegative = find(phi_r_xi<0);
 
+if Enable_Plot_GraphAnalysis
 GraphMatrix = NormMatrixElement(YbusOrigin,'DiagFlag',0);
-fig_n = fig_n + 1;
-figure(fig_n)
+Fig_N = Fig_N + 1;
+figure(Fig_N)
 PlotGraph();
-SaveGraphData{fig_n} = GraphData;
-SaveGraphFigure{fig_n} = GraphFigure;
-
+SaveGraphData{Fig_N} = GraphData;
+SaveGraphFigure{Fig_N} = GraphFigure;
 highlight(GraphFigure,PhiRightPositive,'NodeColor',RgbYellow);
 highlight(GraphFigure,PhiRightNegative,'NodeColor',RgbGreen);
+end
 
 % Left eigenvector
 phi_l_xi = transpose(phi_inv(xi_min_index,:));
@@ -640,15 +659,16 @@ phi_l_xi = transpose(phi_inv(xi_min_index,:));
 PhiLeftPositive = find(phi_l_xi>=0);
 PhiLeftNegative = find(phi_l_xi<0);
 
+if Enable_Plot_GraphAnalysis
 GraphMatrix = NormMatrixElement(YbusOrigin,'DiagFlag',0);
-fig_n = fig_n + 1;
-figure(fig_n)
+Fig_N = Fig_N + 1;
+figure(Fig_N)
 PlotGraph();
-SaveGraphData{fig_n} = GraphData;
-SaveGraphFigure{fig_n} = GraphFigure;
-
+SaveGraphData{Fig_N} = GraphData;
+SaveGraphFigure{Fig_N} = GraphFigure;
 highlight(GraphFigure,PhiLeftPositive,'NodeColor',RgbYellow);
 highlight(GraphFigure,PhiLeftNegative,'NodeColor',RgbGreen);
+end
 
 % Fiedler vector
 FiedlerVec = phi_r_xi.*phi_l_xi;
@@ -658,26 +678,16 @@ FiedlerNegative = find(FiedlerVec<0);
 [~,FiedlerMinIndex] = min(FiedlerVec);
 [~,FiedlerMaxIndex] = max(abs(FiedlerVec))
 
+if Enable_Plot_GraphAnalysis
 GraphMatrix = NormMatrixElement(YbusOrigin,'DiagFlag',0);
-fig_n = fig_n + 1;
-figure(fig_n)
+Fig_N = Fig_N + 1;
+figure(Fig_N)
 PlotGraph();
-SaveGraphData{fig_n} = GraphData;
-SaveGraphFigure{fig_n} = GraphFigure;
-
+SaveGraphData{Fig_N} = GraphData;
+SaveGraphFigure{Fig_N} = GraphFigure;
 highlight(GraphFigure,FiedlerPositive,'NodeColor',RgbYellow);
 highlight(GraphFigure,FiedlerNegative,'NodeColor',RgbGreen);
-
-% % Plot graph KH
-% GraphMatrix = NormMatrixElement(KH,'DiagFlag',0);
-% fig_n = fig_n + 1;
-% figure(fig_n)
-% PlotGraph();
-% SaveGraphData{fig_n} = GraphData;
-% SaveGraphFigure{fig_n} = GraphFigure;
-
-% figure(2)
-% plot([-1,1],[0,0])
+end
 
 % GammaHphi
 GammaHphi = inv(phi)*Hinv*Gamma*phi;
@@ -736,15 +746,14 @@ eig_sys = diag(eig_sys)/2/pi;
 fprintf('Plotting...\n')
 
 % Plot: symbolic
-figure_n = 0;
+if Enable_Plot_Symbolic
 PlotSymbolic();
+end
 
 % Plot: poles of state space system
-figure_n = 1000;
-
-if Enable_Plot_Poles
-figure_n = figure_n+1;
-figure(figure_n)
+if Enable_Plot_Eigenvalue
+Fig_N = Fig_N+1;
+figure(Fig_N)
 % scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
 scatter(real(eig_sys),imag(eig_sys),'x','LineWidth',1.5); hold on; grid on;
 scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
@@ -752,8 +761,8 @@ legend('Loop12','Loop1')
 end
 
 if Enable_ComparisonToolbox
-figure_n = figure_n+1;
-figure(figure_n)
+Fig_N = Fig_N+1;
+figure(Fig_N)
 scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
 scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
 pole_sys_toolbox = load('pole_sys').pole_sys;
