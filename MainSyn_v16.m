@@ -20,7 +20,8 @@ ColorRGB();
 %% Select data
 % UserData = '68Bus_SG_PassiveLoad';
 % UserData = '68Bus_SG_IBR_PassiveLoad';
-UserData = '68Bus_SG_IBR';
+% UserData = '68Bus_SG_IBR';
+UserData = '68Bus_SG_IBR_NoFloatingBus';
 
 % Backup:
 % UserData = 'Nature_NETS_NYPS_68Bus_original';
@@ -53,7 +54,7 @@ Enable_Plot_Symbolic            = 0;
 Enable_Plot_Eigenvalue          = 1;    % 1/0: Plot eigenvalues.
 Enable_Plot_GraphOrigin         = 1;    % 1/0: Plot the graph of the original power system
 Enable_Plot_GraphKH             = 0;    % 1/0: Plot the graph for KH
-Enable_Plot_GraphAnalysis       = 0;    % 1/0: Plot the graph for analysis
+Enable_Plot_GraphAnalysis       = 1;    % 1/0: Plot the graph for analysis
 
 Enable_SavePlot                 = 0;
 
@@ -639,8 +640,10 @@ end
 % Right eigenvector
 phi_r_xi = phi(:,xi_min_index);
 % phi_r_xi = phi_r_xi(Order_New2Old_NoFbus,1);
-PhiRightPositive = find(phi_r_xi>=0);
-PhiRightNegative = find(phi_r_xi<0);
+PhiRightMedian = median(phi_r_xi);
+PhiRightMean = mean(phi_r_xi);
+PhiRightPositive = find(phi_r_xi>=PhiRightMean);
+PhiRightNegative = find(phi_r_xi<PhiRightMean);
 
 if Enable_Plot_GraphAnalysis
 GraphMatrix = NormMatrixElement(YbusOrigin,'DiagFlag',0);
@@ -671,10 +674,16 @@ highlight(GraphFigure,PhiLeftNegative,'NodeColor',RgbGreen);
 end
 
 % Fiedler vector
-FiedlerVec = phi_r_xi.*phi_l_xi;
-FiedlerVecAbs = abs(FiedlerVec)
-FiedlerPositive = find(FiedlerVec>=0);
-FiedlerNegative = find(FiedlerVec<0);
+% FiedlerVec = phi_r_xi.*phi_l_xi;
+% FiedlerPositive = find(FiedlerVec>=0);
+% FiedlerNegative = find(FiedlerVec<0);
+% [~,FiedlerMinIndex] = min(FiedlerVec);
+% [~,FiedlerMaxIndex] = max(abs(FiedlerVec))
+FiedlerVec = phi_r_xi.*abs(phi_l_xi);
+FiedlerMedian = median(FiedlerVec);
+FiedlerAverage = mean(FiedlerVec);
+FiedlerPositive = find(FiedlerVec>=FiedlerAverage);
+FiedlerNegative = find(FiedlerVec<FiedlerAverage);
 [~,FiedlerMinIndex] = min(FiedlerVec);
 [~,FiedlerMaxIndex] = max(abs(FiedlerVec))
 
