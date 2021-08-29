@@ -2,7 +2,10 @@
 % clc
 % close all
 % 
-figure(999)
-plot(abs(KH_Vec))
+t1= [1,-1;
+     -1,1];
 
-[t1,t2] = min(KH_Vec)
+% t2 = inv(t1)
+
+tv = [1;1];
+ti = t1 * tv

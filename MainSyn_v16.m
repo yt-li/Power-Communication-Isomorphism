@@ -3,6 +3,13 @@
 
 % Author(s): Yitong Li, Yunjie Gu
 
+% Notes:
+% Numerical calculation error normally happens:
+% when doing D-Y conversion, where inv(Ybus) needs to be calculated. For
+% example, a pure IBR system without passive loads. Another example is when
+% combing the flux inductor into the network lines and update the voltage
+% values at voltage nodes.
+
 %% Prepare
 clear all
 clc
@@ -13,20 +20,21 @@ mfile_name = mfilename('fullpath');
 [RootPath,~,~]  = fileparts(mfile_name);
 cd(RootPath);
 addpath(genpath([RootPath,'/Functions']));
+addpath(genpath([RootPath,'/TestData']));
 
 %% Get color RGB
 ColorRGB();
 
 %% Select data
-% UserData = '68Bus_SG_PassiveLoad';
-% UserData = '68Bus_SG_IBR_PassiveLoad';
-% UserData = '68Bus_SG_IBR';
-UserData = '68Bus_SG_IBR_NoFloatingBus';
+% Gamma analysis
+% UserData = 'Gamma_SingleSgInfiniteBus';
+UserData = 'Gamma_SingleGflInfiniteBus';
 
-% Backup:
-% UserData = 'Nature_NETS_NYPS_68Bus_original';
-% UserData = 'Nature_NETS_NYPS_68Bus_HybridSGIBR';
-% UserData = '4ApparatusModel';
+% K analysis
+% UserData = 'K_68Bus_SG_PassiveLoad';
+% UserData = 'K_68Bus_SG_IBR_PassiveLoad';
+% UserData = 'K_68Bus_SG_IBR';
+% UserData = 'K_68Bus_SG_IBR_NoFloatingBus';
 
 %% Compare toolbox with nature
 Enable_ComparisonToolbox   = 0;         % 1/0: Compare the toolbox with nature
@@ -35,7 +43,6 @@ Enable_ComparisonToolbox   = 0;         % 1/0: Compare the toolbox with nature
 if Enable_ComparisonToolbox
     SimplexPS.Toolbox.Main();
     save('pole_sys.mat','pole_sys');
-    clear all
     clc
     close all
 end
@@ -54,7 +61,7 @@ Enable_Plot_Symbolic            = 0;
 Enable_Plot_Eigenvalue          = 1;    % 1/0: Plot eigenvalues.
 Enable_Plot_GraphOrigin         = 1;    % 1/0: Plot the graph of the original power system
 Enable_Plot_GraphKH             = 0;    % 1/0: Plot the graph for KH
-Enable_Plot_GraphAnalysis       = 1;    % 1/0: Plot the graph for analysis
+Enable_Plot_GraphAnalysis       = 0;    % 1/0: Plot the graph for analysis
 
 Enable_SavePlot                 = 0;
 
@@ -176,7 +183,6 @@ if Enable_SavePlot
 end
 end
 
-
 % =============================
 % Handle floating node
 % =============================
@@ -249,10 +255,14 @@ Ybus_ = Ybus_(1:N_Bus,1:N_Bus);
 
 % Update V and I
 % Notes: The steady-state voltage at voltage buses are changed if we split
-% the inductor outside the apparatus. The following calculation is
-% equivalent to "V = V+I/Y_sg".
+% the inductor outside the apparatus. The "for loop" voltage calculation is
+% equivalent to the matrix form "V = inv(Ybus)*I". But this matrix form
+% would lead to wrong results in some cases when Ybus is almost
+% non-invertible.
 I = I(1:N_Bus,:);
-V = inv(Ybus)*I;
+for i = 1:(n_Ibus_1st-1)
+    V(i) = V(i) + I(i)/Y_sg{i};
+end
 
 end
 
@@ -277,7 +287,7 @@ for i = n_Ibus_1st:(n_Fbus_1st-1)
 % Notes: 
 % All inverters have same current controllers
 kp_i = DeviceParaNew{i}.kp_i_dq;  
-ki_i = DeviceParaNew{i}.ki_i_dq;
+ki_i = DeviceParaNew{i}.ki_i_dq;                                                    % Remember to scale this one to match simulation!
 Lf   = DeviceParaNew{i}.L;
 Rf   = DeviceParaNew{i}.R;
 
@@ -537,7 +547,7 @@ Cv = [1,0;
 Dv = [0;
       0];
 T_V_ss = ss(Av,Bv,Cv,Dv);
-T_V_ss = T_V_ss*J{n_v_ref};
+T_V_ss = T_V_ss*J{n_v_ref};         % T_V_ss actually represents this system: 1/(D/J+s) without Hinv
 
 end
 
@@ -741,8 +751,8 @@ feedout_L1 = [1:N_Bus]*2;
 feedout_L2 = [1:N_Bus]*2-1;
 T1cl = feedback(Tss*Hinv,K,feedin,feedout_L1);
 T12cl = feedback(T1cl,Gamma,feedin,feedout_L2);
-% T1cl = minreal(T1cl);
-% T12cl = minreal(T12cl);
+T1cl = minreal(T1cl);
+T12cl = minreal(T12cl);
 
 % Calculate the whole system pole
 pole_sys_T1cl = pole(T1cl)/2/pi;
@@ -763,24 +773,25 @@ end
 if Enable_Plot_Eigenvalue
 Fig_N = Fig_N+1;
 figure(Fig_N)
+scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
 % scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
 scatter(real(eig_sys),imag(eig_sys),'x','LineWidth',1.5); hold on; grid on;
-scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
-legend('Loop12','Loop1')
+
+legend('Loop1','Loop12')
 end
 
 if Enable_ComparisonToolbox
 Fig_N = Fig_N+1;
 figure(Fig_N)
-scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
 scatter(real(pole_sys_T1cl),imag(pole_sys_T1cl),'x','LineWidth',1.5); hold on; grid on;
+scatter(real(pole_sys_T12cl),imag(pole_sys_T12cl),'x','LineWidth',1.5); hold on; grid on;
 pole_sys_toolbox = load('pole_sys').pole_sys;
 index = find(abs(imag(pole_sys_toolbox))<35);
 pole_sys_toolbox = pole_sys_toolbox(index);
 index = find(real(pole_sys_toolbox)>-1e3);
 pole_sys_toolbox = pole_sys_toolbox(index);
 scatter(real(pole_sys_toolbox),imag(pole_sys_toolbox),'x','LineWidth',1.5); hold on; grid on;
-legend('Yunjie With F Shift','Yunjie Wihtout F Shift','Toolbox')
+legend('Yunjie Wihtout F Shift','Yunjie With F Shift','Toolbox')
 end
 
 %% Check stability
