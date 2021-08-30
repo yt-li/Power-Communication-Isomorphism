@@ -19,6 +19,7 @@ Index_Vbus = find(DeviceSourceType == 1);
 Index_Ibus = find(DeviceSourceType == 2);
 Index_Fbus = find(DeviceSourceType == 3);
 Order_Old2New = [Index_Vbus,Index_Ibus,Index_Fbus]; % Convert old order to new
+Order_New_VInoF = [Index_Vbus,Index_Ibus];
 for i = 1:N_Bus
     Order_New2Old(Order_Old2New(i)) = i;            % Convert new order back to old
 end
