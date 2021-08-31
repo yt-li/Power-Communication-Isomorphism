@@ -29,12 +29,13 @@ ColorRGB();
 % Gamma analysis
 % UserData = 'Gamma_SingleSgInfiniteBus';
 % UserData = 'Gamma_SingleGflInfiniteBus';
+UserData = 'Gamma_SingleSgInfiniteBus_ForSim';
 
 % K analysis
 % UserData = 'K_68Bus_SG_Load';
 % UserData = 'K_68Bus_SG_IBR_Load';
 % UserData = 'K_68Bus_SG_IBR';
-UserData = 'K_68Bus_SG_IBR_17';
+% UserData = 'K_68Bus_SG_IBR_17';
 
 % Backup
 % UserData = 'K_68Bus_SG_IBR_6';
@@ -67,7 +68,7 @@ Enable_Plot_GraphOrigin         = 1;    % 1/0: Plot the graph of the original po
 Enable_Plot_GraphKH             = 0;    % 1/0: Plot the graph for KH
 Enable_Plot_GraphAnalysis       = 0;    % 1/0: Plot the graph for analysis
 
-Enable_SavePlot                 = 1;
+Enable_SavePlot                 = 0;
 
 % Initialize figure index
 Fig_N = 0;
@@ -182,6 +183,13 @@ highlight(GraphFigure,Index_Vbus,'NodeColor',RgbBlue);
 highlight(GraphFigure,Index_Ibus,'NodeColor',RgbRed);
 SaveGraphData{Fig_N} = GraphData;
 SaveGraphFigure{Fig_N} = GraphFigure;
+r = linspace(0.5,1,50);
+g = r*0.5;
+b = r*0.5;
+mymap = [r' g' b']; 
+h1 = colormap(mymap);
+colorbar();
+caxis([13 50]);
 if Enable_SavePlot
     print(gcf,'Graph_68Bus.png','-dpng','-r600');
 end
@@ -291,7 +299,7 @@ for i = n_Ibus_1st:(n_Fbus_1st-1)
 % Notes: 
 % All inverters have same current controllers
 kp_i = DeviceParaNew{i}.kp_i_dq;  
-ki_i = DeviceParaNew{i}.ki_i_dq/10;                                                    % Remember to scale this one to match simulation!
+ki_i = DeviceParaNew{i}.ki_i_dq/10;                                                    % ???
 Lf   = DeviceParaNew{i}.L;
 Rf   = DeviceParaNew{i}.R;
 
@@ -301,7 +309,8 @@ Rf   = DeviceParaNew{i}.R;
 % different inverters to be same, there Q-PLL bandwidth would probably be
 % different because of different id output or active power output. We
 % ensure the vq-PLL bandwidth here.
-kp_pll{i} = DeviceParaNew{i}.kp_pll;
+kp_pll{i} = DeviceParaNew{i}.kp_pll;                                                  % ???
+% kp_pll{i} = 0;
 ki_pll{i} = DeviceParaNew{i}.ki_pll;
 PI_pll{i} = kp_pll{i} + ki_pll{i}/s;
 
@@ -751,8 +760,8 @@ end
 
 % Calculate the whole-system closed loop state space model
 feedin = [1:N_Bus];
-feedout_L1 = [1:N_Bus]*2;
-feedout_L2 = [1:N_Bus]*2-1;
+feedout_L1 = [1:N_Bus]*2;           % theta port
+feedout_L2 = [1:N_Bus]*2-1;         % omega port
 T1cl = feedback(Tss*Hinv,K,feedin,feedout_L1);
 T12cl = feedback(T1cl,Gamma,feedin,feedout_L2);
 if ~isempty(T1cl.E) || ~isempty(T12cl.E)
