@@ -32,6 +32,14 @@ Index_Ebus      = Data.Index_Ebus;
 Order_Old2New   = Data.Order_Old2New;
 Order_New2Old   = Data.Order_New2Old;
 
+NodeYZ = abs(diag(GbusVIF));
+GraphFigure.NodeFontSize = 5.5;
+
+for k = 1:length(Index_Vbus)
+    NodeYZ(k) = 1/NodeYZ(k);
+end
+NodeYZ = NodeYZ(Order_New2Old);
+
 %%
 FigNum = 0;
 ColorRGB();
@@ -92,9 +100,9 @@ ColorUpper = [0,0,1];
 GradRed     = linspace(ColorLower(1),ColorUpper(1),ColorStepSize)';
 GradGreen   = linspace(ColorLower(2),ColorUpper(2),ColorStepSize)';
 GradBlue    = linspace(ColorLower(3),ColorUpper(3),ColorStepSize)';
-colormap([GradRed GradGreen GradBlue]);
-colorbar();
-caxis([0 FiedlerAbsMax]);
+% colormap([GradRed GradGreen GradBlue]);
+% colorbar();
+% caxis([0 FiedlerAbsMax]);
 
 %% Set current node
 highlight(GraphFigure,Index_Ibus,'NodeColor',[0,1,0]);
@@ -105,31 +113,18 @@ for k = 1:length(Index_Ibus)
 end
 
 %% Set node label
-NodeYZ = abs(diag(GbusVIF));
-GraphFigure.NodeFontSize = 5.5;
-
-for k = 1:length(Index_Vbus)
-    NodeYZ(k) = 1/NodeYZ(k);
-end
-NodeYZ = NodeYZ(Order_New2Old);
-
 for k = 1:length(Order_Old2New)
     GraphFigure.NodeLabel{k} = num2str(NodeYZ(k),2);
 end
 
-% for k = 1:length(Order_Old2New)
-%     GraphFigure.NodeLabel{Order_Old2New(k)} = num2str(NodeYZ(k),2);
-% end
-
-% for k = (length(Index_Vbus)+1):length(Order_Old2New)
-%     GraphFigure.NodeLabel{Order_Old2New(k)} = num2str(NodeYZ(k),2);
-% end
+%%
+% x = GraphFigure.XData';
+% y = GraphFigure.YData';
+% v = NodeYZ;
+% 
+% PlotHeatMap(x,y,v,1,[0,0.6]);
 
 %% Save
 if Enable_SaveFigure
     print(gcf,['Graph_' DataName '.png'],'-dpng','-r600');
 end
-
-%% Color
-figure(2)
-plot(GraphFigure)
