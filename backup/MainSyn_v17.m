@@ -29,11 +29,11 @@ ColorRGB();
 % Gamma analysis
 % UserData = 'Gamma_SingleSgInfiniteBus';
 % UserData = 'Gamma_SingleGflInfiniteBus';
-UserData = 'Gamma_SingleSgInfiniteBus_ForSim';
+% UserData = 'Gamma_SingleSgInfiniteBus_ForSim';
 
 % K analysis
 % UserData = 'K_68Bus_SG_Load';
-% UserData = 'K_68Bus_SG_IBR_Load';
+UserData = 'K_68Bus_SG_IBR_Load';
 % UserData = 'K_68Bus_SG_IBR';
 % UserData = 'K_68Bus_SG_IBR_17';
 
@@ -213,8 +213,8 @@ Ybus_ = HybridMatrixYZ(Ybus_,n_Fbus_1st);
 if n_Ibus_1st>N_Bus
    n_Ibus_1st = n_Fbus_1st;     % Update Ibus_1st
 end
-N_Bus = n_Fbus_1st-1;
 
+N_Bus = n_Fbus_1st-1;
 Ybus = Ybus(1:N_Bus,1:N_Bus);
 Ybus_ = Ybus_(1:N_Bus,1:N_Bus);
 
@@ -276,6 +276,8 @@ for i = 1:(n_Ibus_1st-1)
     V(i) = V(i) + I(i)/Y_sg{i};
 end
 
+else
+    fprintf('Warning: The voltage-node inner loop has been disabled.\n')
 end
 
 end
@@ -342,23 +344,31 @@ Y_inv_prime = (Y_inv_ - Y_inv)/(1i*dW);
 % Add Y_inv to nodal admittance matrix
 if Enable_CurrentNode_InnerLoop                                                 % ??? 
     
-for i = 1:N_Bus
-    if DeviceSourceType(i) == 2
-        % Self branch
-        Ybus(i,i) = Ybus(i,i) + Y_inv;
-        Ybus_(i,i) = Ybus_(i,i) + Y_inv_;
-        Ybus_dwn(i,i) = Ybus_dwn(i,i) + Y_inv_dwn;
-        Ybus_dwm(i,i) = Ybus_dwm(i,i) + Y_inv_dwm;
-    end
+for i = n_Ibus_1st:(n_Fbus_1st - 1)
+    % Self branch
+    Ybus(i,i) = Ybus(i,i) + Y_inv;
+    Ybus_(i,i) = Ybus_(i,i) + Y_inv_;
+    Ybus_dwn(i,i) = Ybus_dwn(i,i) + Y_inv_dwn;
+    Ybus_dwm(i,i) = Ybus_dwm(i,i) + Y_inv_dwm;
 end
 
 % Update I
 V = V(1:N_Bus,:);
 I = Ybus*V;
 
+else
+    fprintf('Warning: The current-node inner loop has been disabled.\n')
 end
 
 end
+
+% V__ =  load('test_V').V;
+% I__ = load('test_I').I;
+% 
+% t1 = V - V__
+% t2 = I - I__
+% 
+% stop
 
 % =============================
 % Get the angles
@@ -827,3 +837,17 @@ if isempty(find(real(pole_T12cl)>1e-4, 1))
 else
     fprintf('Unstable!\n')
 end
+
+%% Save
+SaveData.KH = KH;
+SaveData.Ybus = Ybus;
+SaveData.YbusOrigin = YbusOrigin;
+SaveData.Index_Vbus = Index_Vbus;
+SaveData.Index_Ibus = Index_Ibus;
+SaveData.Index_Fbus = Index_Fbus;
+SaveData.Order_Old2New = Order_Old2New;
+SaveData.Order_New2Old = Order_New2Old;
+SaveData.pole_T1cl = pole_T1cl;
+SaveData.pole_T12cl = pole_T12cl;
+
+save([UserData,'_Data'],'SaveData');
