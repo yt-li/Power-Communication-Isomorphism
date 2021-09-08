@@ -9,12 +9,12 @@ mfile_name = mfilename('fullpath');
 cd(RootPath);
 
 %% Enables
-Enable_SaveFigure = 1;
+Enable_SaveFigure = 0;
 
 %% Load data
 % DataName = 'K_68Bus_SG_IBR_Load_Data';
 % DataName = 'K_68Bus_SG_IBR_Data';
-% DataName = 'K_68Bus_SG_IBR_17_Data';
+DataName = 'K_68Bus_SG_IBR_17_Data';
 
 Data = load(DataName).SaveData;
 
@@ -102,7 +102,7 @@ for k = 1:length(Index_Ibus)
 end
 
 %% Clear all node number
-if 0
+if 1
     for k = 1:length(Order_Old2New)
         GraphFigure.NodeLabel{k} = '';
     end
@@ -110,7 +110,7 @@ end
 
 %% Calculate impedance
 NodeYZ = abs(diag(GbusVIF));
-GraphFigure.NodeFontSize = 7;
+GraphFigure.NodeFontSize = 5.5;
 
 for k = 1:length(Index_Vbus)
     NodeYZ(k) = 1/NodeYZ(k);    % Convert admittance to impedance at voltage node
@@ -125,13 +125,13 @@ XData = XData(Order_Old2New);
 YData = YData(Order_Old2New);
 ZData = ZData(Order_Old2New);
 
-% Remove the voltage bus impedance to smooth the map
+% Remove the voltage bus impedance
 XData = XData(length(Index_Vbus)+1:end,:);
 YData = YData(length(Index_Vbus)+1:end,:);
 ZData = ZData(length(Index_Vbus)+1:end,:);
 
 %% Plot impedance value to node
-if 0
+if 1
     for k = 1:length(Order_Old2New)
         GraphFigure.NodeLabel{k} = num2str(NodeYZ(k),2);
     end
@@ -158,21 +158,15 @@ end
 % Plot heat map
 PlotHeatMap(XData,YData,ZData,1,[0,0.5]);
 
-% Get the max
-ZDataMax = max(ZData);
-
 % Move graph to top
 uistack(GraphFigure,'top');
 
 %% Set Figure Lim
-FigureMargin = 0.3;
-% xmax = max(abs(XData));
-% ymax = max(abs(YData));
-% xymax = max(xmax,ymax);
-% xlim([-xymax-FigureMargin,xymax+FigureMargin]);
-% ylim([-xymax-FigureMargin,xymax+FigureMargin]);
-xlim([min(GraphFigure.XData)-FigureMargin,max(GraphFigure.XData)+FigureMargin]);
-ylim([min(GraphFigure.YData)-FigureMargin,max(GraphFigure.YData)+FigureMargin]);
+xmax = max(abs(XData));
+ymax = max(abs(YData));
+xymax = max(xmax,)
+% xlim([min(XData)-0.1,max(XData)+0.1]);
+% ylim([min(YData)-0.1,max(YData)+0.1]);
 
 %% Save
 if Enable_SaveFigure
