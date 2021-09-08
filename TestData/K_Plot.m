@@ -9,11 +9,11 @@ mfile_name = mfilename('fullpath');
 cd(RootPath);
 
 %% Enables
-Enable_SaveFigure = 0;
+Enable_SaveFigure = 1;
 
 %% Load data
-% DataName = 'K_68Bus_SG_IBR_Load_Data';
-DataName = 'K_68Bus_SG_IBR_Data';
+DataName = 'K_68Bus_SG_IBR_Load_Data';
+% DataName = 'K_68Bus_SG_IBR_Data';
 % DataName = 'K_68Bus_SG_IBR_17_Data';
 
 Data = load(DataName).SaveData;
@@ -36,9 +36,9 @@ NodeYZ = abs(diag(GbusVIF));
 GraphFigure.NodeFontSize = 5.5;
 
 for k = 1:length(Index_Vbus)
-    NodeYZ(k) = 1/NodeYZ(k);
+    NodeYZ(k) = 1/NodeYZ(k);    % Convert admittance to impedance at voltage node
 end
-NodeYZ = NodeYZ(Order_New2Old);
+NodeYZ = NodeYZ(Order_New2Old); % Convert the order back to its origin
 
 %%
 FigNum = 0;
@@ -57,9 +57,6 @@ highlight(GraphFigure,GraphData,'EdgeColor',[0,0,0],'LineWidth',1.1);     % Chan
 highlight(GraphFigure,GraphData,'NodeColor',[0,0,0]);                   % Change all nodes to black by default
 highlight(GraphFigure,GraphData,'MarkerSize',5);
 
-% SaveGraphData{Fig_N} = GraphData;
-% SaveGraphFigure{Fig_N} = GraphFigure;
-
 %% Set voltage node
 highlight(GraphFigure,Index_Vbus,'NodeColor',[0,0,0]);
 
@@ -76,12 +73,12 @@ PhiInv = inv(Phi);
 Xi = diag(Xi);
 [~,Index_XiMin] = min(real(Xi));
 XiMin = Xi(Index_XiMin);
-% if abs(XiMin)<=1e-4                    % Check if xi_min is zero
-%     Xi_ = Xi;
-%     Xi_(Index_XiMin) = inf;
-%     [~,Index_XiMin] = min(real(Xi_));
-%     XiMin = Xi(Index_XiMin);
-% end
+if abs(XiMin)<=1e-4                    % Check if xi_min is zero
+    Xi_ = Xi;
+    Xi_(Index_XiMin) = inf;
+    [~,Index_XiMin] = min(real(Xi_));
+    XiMin = Xi(Index_XiMin);
+end
 
 PhiRightMin = Phi(:,Index_XiMin);
 PhiLeftMin = transpose(PhiInv(Index_XiMin,:));

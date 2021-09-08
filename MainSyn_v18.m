@@ -32,13 +32,13 @@ ColorRGB();
 % UserData = 'Gamma_SingleSgInfiniteBus_ForSim';
 
 % K analysis
-% UserData = 'K_68Bus_SG_Load';
+UserData = 'K_68Bus_SG_Load';
 % UserData = 'K_68Bus_SG_IBR_Load';
 % UserData = 'K_68Bus_SG_IBR';
 % UserData = 'K_68Bus_SG_IBR_17';
+% UserData = 'K_68Bus_SG_IBR_6';
 
 % Backup
-% UserData = 'K_68Bus_SG_IBR_6';
 % UserData = 'K_68Bus_SG_IBR_NoFbus';
 
 %% Compare toolbox with nature
@@ -278,7 +278,7 @@ for i = n_Ibus_1st:(n_Fbus_1st-1)
 % Notes: 
 % All inverters have same current controllers
 kp_i = DeviceParaNew{i}.kp_i_dq;  
-ki_i = DeviceParaNew{i}.ki_i_dq/10;                                                    % ???
+ki_i = DeviceParaNew{i}.ki_i_dq;                                                    % ???
 Lf   = DeviceParaNew{i}.L;
 Rf   = DeviceParaNew{i}.R;
 
@@ -422,7 +422,7 @@ end
 if Enable_vq_PLL
     S = conj(InputNormalized)*transpose(Input);
 else
-    S = conj(Input)*transpose(Input)
+    S = conj(Input)*transpose(Input);
 end
 ang_S_degree = angle(S)/pi*180;
 

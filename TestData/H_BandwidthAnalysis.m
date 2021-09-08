@@ -74,4 +74,7 @@ for k = 1:length(w_i)
     scatter(real(pole_f{k}),imag(pole_f{k}),'x','LineWidth',1.5); hold on; grid on;
 end
 
+% Notes:
+% By sweeping w_i, we could find that the larger of w_i, the larger of w_b.
+
 end
