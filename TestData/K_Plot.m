@@ -12,7 +12,7 @@ cd(RootPath);
 Enable_SaveFigure = 1;
 
 %% Load data
-% DataName = 'K_68Bus_SG_IBR_Load_Data';
+DataName = 'K_68Bus_SG_IBR_Load_Data';
 % DataName = 'K_68Bus_SG_IBR_Data';
 % DataName = 'K_68Bus_SG_IBR_17_Data';
 
@@ -156,7 +156,7 @@ end
 % ZData = [ZData; ZData_1; ZData_2; ZData_3; ZData_4];
 
 % Plot heat map
-PlotHeatMap(XData,YData,ZData,1,[0,0.5]);
+PlotHeatMap(XData,YData,ZData,1,[0,0.25]);
 
 % Get the max
 ZDataMax = max(ZData);
