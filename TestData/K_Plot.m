@@ -9,12 +9,12 @@ mfile_name = mfilename('fullpath');
 cd(RootPath);
 
 %% Enables
-Enable_SaveFigure = 1;
+Enable_SaveFigure = 0;
 
 %% Load data
-DataName = 'K_68Bus_SG_IBR_Load_Data';
+% DataName = 'K_68Bus_SG_IBR_Load_Data';
 % DataName = 'K_68Bus_SG_IBR_Data';
-% DataName = 'K_68Bus_SG_IBR_17_Data';
+DataName = 'K_68Bus_SG_IBR_17_Data';
 
 Data = load(DataName).SaveData;
 

@@ -13,7 +13,8 @@ function figo = PlotHeatMap(x,y,v,fig,range)
     % Interpolant
     F = scatteredInterpolant(x,y,v);
     [xq,yq] = meshgrid(-4.5:0.1:4.5);
-    F.Method = 'linear';
+    % F.Method = 'linear';
+    F.Method = 'natural';
     vq = F(xq,yq);
     
     % Further deal with unreasonable data
@@ -56,6 +57,11 @@ function figo = PlotHeatMap(x,y,v,fig,range)
     GradBlue    = linspace(ColorLower(3),ColorUpper(3),ColorStepSize)';
     fig.Colormap = [GradRed GradGreen GradBlue];
     %colormap([GradRed GradGreen GradBlue]);
+    
+   	figure;
+    mesh(xq,yq,vq);
+    hold on;
+    plot3(x,y,v,'.');
     
 end
 
