@@ -72,9 +72,6 @@ xticks([-3,-2,-1,0,0.5])
 ylim([-4,4]);
 yticks([-4,-2,0,2,4]);
 
-% Plot zero point
-plot(0, 0, 'k.', 'markersize', 20); grid on; hold on;
-
 % Colorbar
 ColorStep = 100;
 GradRed     = linspace(ColorLower(1),ColorUpper(1),ColorStep)';
@@ -84,14 +81,24 @@ colormap([GradRed GradGreen GradBlue]);
 colorbar();
 caxis([FreqLower/F0,FreqUpper/F0]);
 
-if Enable_SaveFigure
-    print(gcf,'H_Contour.png','-dpng','-r600');
+%% Plot pole
+% Voltage node
+if 1
+% plot(0, 0, 'k.', 'markersize', 15); grid on; hold on;
+scatter(0,0,'x','LineWidth',1,'MarkerEdgeColor',[0,0,0]); grid on; hold on;
 end
 
-%% Plot pole
-if 0
-pole_G = load('pole_G').pole_G;
-for k = 1:length(pole_G)
-    scatter(real(pole_G{k}),imag(pole_G{k}),'x','LineWidth',1.5); hold on; grid on;
+% Current node
+if 1
+% pole_pu = load('H_pole_pu').pole_pu;
+pole_pu = load('H_pole_pu_sweep').pole_pu;
+for k = 1:length(pole_pu)
+% plot(real(pole_pu(k)), imag(pole_pu(k)), 'k.', 'markersize', 15); grid on; hold on;
+scatter(real(pole_pu{k}),imag(pole_pu{k}),'x','LineWidth',1,'MarkerEdgeColor',[0,0,0]); hold on; grid on;
 end
+end
+
+%% Save
+if Enable_SaveFigure
+    print(gcf,'H_Contour.png','-dpng','-r600');
 end
