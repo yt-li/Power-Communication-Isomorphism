@@ -65,7 +65,8 @@ pole_pu = {};
 for k = 1:length(w_i)
     kp_i = Lf*w_i(k);
     ki_i = Lf*w_i(k)^2/4;
-    Z_PIi = kp_i + ki_i/(s-1i*W0);
+    Z_PIi = kp_i + ki_i/(s-1i*W0);          
+        % The channel bandwidth of current node depends on inner loop (current control) rather than outer loop (PLL).
     G = (Z_PIi+Zf) / (Zf + Z_PIi + Zl);
     G = minreal(G);
     pole_f{k} = pole(G)/2/pi;

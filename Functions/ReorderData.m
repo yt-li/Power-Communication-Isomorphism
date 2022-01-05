@@ -27,9 +27,20 @@ Index_Vbus = find(DeviceSourceType == 1);
 Index_Ibus = find(DeviceSourceType == 2);
 Index_Fbus = find(DeviceSourceType == 3);
 Order_Old2New = [Index_Vbus,Index_Ibus,Index_Fbus]; % Convert old order to new
-Order_New_VInoF = [Index_Vbus,Index_Ibus];
+Order_Old2New_NoFbus = [Index_Vbus,Index_Ibus];
 for i = 1:N_Bus
     Order_New2Old(Order_Old2New(i)) = i;            % Convert new order back to old
+end
+for i = 1:(N_Bus-length(Index_Fbus))
+    Order_New2Old_NoFbus_(Order_Old2New(i)) = i;
+end
+CounterFbus = 0;
+for i = 1:length(Order_New2Old_NoFbus_)
+    if Order_New2Old_NoFbus_(i) ~= 0
+        Order_New2Old_NoFbus(i-CounterFbus) = Order_New2Old_NoFbus_(i);
+    else
+        CounterFbus = CounterFbus+1;
+    end
 end
 
 % Existance of Node

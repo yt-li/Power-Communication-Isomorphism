@@ -60,16 +60,16 @@ FigRowMax = 2;
 FigColumnMax = 1;
 
 Time = Time - 1.8;
-t_Limit = [0,0.8];
-t_Ticks = [0,0.2,0.4,0.6,0.8];
+t_Limit = [0,0.6];
+t_Ticks = [0,0.2,0.4,0.6];
 w_Limit = [0.98,1.02]; 
 w_Ticks = [0.98,1,1.02];
-s_Limit = [0,1];
-s_Ticks = [0,0.5,1];
+s_Limit = [0,1.5];
+s_Ticks = [0,0.5,1,1.5];
 % e_Limit = [-15,15]*1e-3;
 % e_Ticks = [-15,0,15]*1e-3;
-e_Limit = [-1,1];
-e_Ticks = [-1,0,1];
+e_Limit = [-0.2,1];
+e_Ticks = [-0.2,0,0.2,0.4,0.6,0.8,1];
 
 FigSize = [0.1 0.1 0.18 0.5];
 
@@ -100,7 +100,7 @@ ylim(s_Limit);
 yticks(s_Ticks);
 
 subplot(FigRowMax,FigColumnMax,2)
-plot(Time,p_SG_int*60,'LineWidth',LineWidth,'Color',LineColor{1}); grid on; hold on;
+plot(Time,abs(p_SG_int)*60,'LineWidth',LineWidth,'Color',LineColor{1}); grid on; hold on;
 xlabel('Time (s)','interpreter','latex')
 ylabel('$E$ (pu)','interpreter','latex')
 xlim(t_Limit);
@@ -127,7 +127,7 @@ ylim(s_Limit);
 yticks(s_Ticks);
 
 subplot(FigRowMax,FigColumnMax,2)
-plot(Time,p_IBR_int*60,'LineWidth',LineWidth,'Color',LineColor{2}); grid on; hold on;
+plot(Time,abs(p_IBR_int)*60,'LineWidth',LineWidth,'Color',LineColor{2}); grid on; hold on;
 xlabel('Time (s)','interpreter','latex')
 ylabel('$E$ (pu)','interpreter','latex')
 xlim(t_Limit);
