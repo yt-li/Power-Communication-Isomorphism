@@ -22,6 +22,7 @@ cd(RootPath);
 addpath(genpath([RootPath,'/Functions']));
 addpath(genpath([RootPath,'/TestData']));
 addpath(genpath([RootPath,'/TestData_K']));
+addpath(genpath([RootPath,'/TestData_K_Simulation']));
 
 %% Get color RGB
 ColorRGB();
@@ -33,42 +34,10 @@ ColorRGB();
 % UserData = 'Gamma_SingleSgInfiniteBus_ForSim';
 
 % K analysis
-% UserData = 'K_68Bus_SG_IBR_Load';
-% UserData = 'K_68Bus_SG_IBR';
-% UserData = 'K_68Bus_SG_IBR_17';
-% UserData = 'K_68Bus_SG_IBR_6';
-
-% K analysis: revision
-% UserData = 'K_68Bus_IBR_Load';
-
-% UserData = 'K_68Bus_IBR_7';
-% UserData = 'K_68Bus_IBR_14';
-% 
-% UserData = 'K_68Bus_IBR_17_7';
-% UserData = 'K_68Bus_IBR_17_7_1';
-
-% 
-% UserData = 'K_68Bus_IBR_17_14_1';
-% UserData = 'K_68Bus_IBR_17_14_1_7';
-% UserData = 'K_68Bus_IBR_17_15';
-% UserData = 'K_68Bus_IBR_17_15_2';
-
-% Backup
-% UserData = 'K_68Bus_SG_Load';
-% UserData = 'K_68Bus_SG_IBR_NoFbus';
-% UserData = 'K_68Bus_SG_IBR_Test';
-
-% Final
 % UserData = 'K_68Bus_IBR';
 % UserData = 'K_68Bus_IBR_17';
 % UserData = 'K_68Bus_IBR_17_14';
-UserData = 'K_68Bus_IBR_17_14_7';
-
-% Notes:
-% Except for 'K_68Bus_SG_IBR', others are matched properly to the toolbox.
-% The only exception might be caused by the calculation errors of Gamma.
-
-Enable_Test = 0;    TestIndex = 30;
+% UserData = 'K_68Bus_IBR_17_14_7';
 
 %% Compare toolbox with nature
 Enable_ComparisonToolbox   = 0;         % 1/0: Compare the toolbox with nature
@@ -83,20 +52,22 @@ if Enable_ComparisonToolbox
     close all
 end
 
-% 
+%% Enable settings
+% For testing participation analysis
 Enable_FiedlerAbs               = 1;
 Enable_NoneZeroXi               = 0;
-Enable_PLL_LPF                  = 1;    % 1/0: if the PLL with an additional 100Hz LPF
-w_tau                           = 2*pi*100;
+Enable_ParticipationTest        = 0;    ParticipationTestIndex = 30;
 
-%% Enable settings
-Enable_VoltageNode_InnerLoop    = 1;    % 1/0: star-delta conversion for flux inductance of voltage node
-Enable_CurrentNode_InnerLoop    = 1;    % 1/0: inner-current loop impedance of current node
+% Enable control loop
+Enable_VoltageNode_InnerLoop    = 1;    % 1/0: star-delta conversion for flux inductance of voltage node                ???
+Enable_CurrentNode_InnerLoop    = 1;    % 1/0: inner-current loop impedance of current node                             ???
 
 Enable_vq_PLL                   = 1;    % 1/0: change Q-PLL to vq-PLL
 Enable_Change_Sign_PLL        	= 0;    % 1/0: change the sign of Q, epsilon_m = 90 or -90, for current node
+Enable_PLL_LPF                  = 1;    % 1/0: if the PLL with an additional 100Hz LPF
+w_tau                           = 2*pi*100;
 
-Select_Ibus_Ref              	= 2;                                        % ???
+Select_Ibus_Ref              	= 2;
 
 % Enable plot
 Enable_Plot_Symbolic            = 0;  
@@ -125,7 +96,7 @@ s = sym('s');
 % Calculate nodal admittance matrix
 fprintf('Calculating nodal admittance matrix...\n')
 W0 = Wbase;
-Ybus = YbusCalc_s_sym(ListLineNew,W0,'albe');
+Ybus = YbusCalc_s_sym(ListLineNew,W0,'albe');       % We get the alpha/beta frame admittance matrix
 
 %% Reorder the Data
 
@@ -383,6 +354,8 @@ end
 % and eliminated here after converting the Y matrix to Y-Z hybrid matrix.
 if Exist_Fbus == 0
     fprintf('Warning: The system has no floating node.\n')
+    YbusVIF = Ybus;
+    YbusVI = Ybus;
 else
     
 fprintf('Eliminating floating node...\n')
@@ -666,8 +639,8 @@ T_I_ss = T_I_ss/Hinv(n_i_ref,n_i_ref);
 
 end
 
-%% Stability criterion
-fprintf('Calculating stability criterion...\n')
+%% K analysis
+fprintf('K analysis...\n')
 
 % KH
 KH = Hinv*K;
@@ -684,7 +657,8 @@ if xi_min < -1e-5
     xi_min_index;
 else
     fprintf(['stable xi.\n']);
-    % Converet x_min to 2nd smallest x_min
+    % Converet x_min to 2nd smallest x_min, i.e., get the smallest non-zero
+    % xi.
     if Enable_NoneZeroXi
         [xi_min2,xi_min2_index] = mink(real(xi_diag),2);
         xi_min = xi_min2(2);
@@ -712,12 +686,12 @@ SaveGraphData{fig_n} = GraphData;
 SaveGraphFigure{fig_n} = GraphFigure;
 end
 
-% % =========================                                                   % ???
-% % For test
-% % =========================
-if Enable_Test
-    xi_min_index = TestIndex;
+% For participation test and tuning, normally disabled
+if Enable_ParticipationTest
+    xi_min_index = ParticipationTestIndex;
 end
+
+% Print xi
 xi_min_Hz = xi_min/2/pi
 xi_min_index
 
@@ -773,10 +747,12 @@ FiedlerAbsVec = abs(FiedlerVec);
 [FiedlerAbsMax,FiedlerAbsMaxIndex] = max(FiedlerAbsVec);
 
 if Enable_FiedlerAbs
-    [FiedlerMaxN,FiedlerMaxNIndex] = maxk(FiedlerAbsVec,15);
+    [FiedlerMaxN,FiedlerMaxNIndex] = maxk(FiedlerAbsVec,6);
 else
-    [FiedlerMaxN,FiedlerMaxNIndex] = maxk(FiedlerVec,15);
+    [FiedlerMaxN,FiedlerMaxNIndex] = maxk(FiedlerVec,6);
 end
+
+% Deal with the floating bus
 for i = 1:length(FiedlerMaxNIndex)
     if FiedlerMaxNIndex(i) >= 50
         FiedlerMaxNIndex(i) = FiedlerMaxNIndex(i) + 17;
@@ -835,8 +811,6 @@ sigma_max = max(max(sigma));
 % If analyzing voltage and current nodes seperately, KH and Gamma_Hphi for
 % two subloops should be re-calculated based on K, Hinv, Gamma, and can not
 % be seperate directly from the whole system KH and Gamma_Hphi.
-
-% StabilityVoltageCurrent();
 
 %% Calculate the state space representation
 % Get whole system Tss
@@ -907,13 +881,12 @@ legend('Yunjie Wihtout F Shift','Yunjie With F Shift','Toolbox')
 end
 
 %% Check stability
-% Criterion
-fprintf('Check the stability by the proposed criterion:\n')
-
+% By proposed criterion
+% fprintf('Check the stability by the proposed criterion:\n')
 % Stability Check Voltage Current
 % StabilityCheckVoltageCurrent();
 
-% Pole
+% By pole
 fprintf('Check the stability by poles:\n')
 UnstablePoleIndex = find(real(pole_T12cl)>1e-9);
 UnstablePoleIndex0 = find(real(pole_T12cl)>0);
@@ -926,11 +899,16 @@ UnstablePole = pole_T12cl(UnstablePoleIndex)
 RiskPole = pole_T12cl(UnstablePoleIndex0)
 
 %% Save
+% Admittance matrix
 SaveData.YbusOrigin = YbusOrigin;
 SaveData.YbusVI = YbusVI;
 SaveData.YbusVIF = YbusVIF;
+
+% Hybrid admittacne/impedance matrix
 SaveData.GbusVI = GbusVI;
 SaveData.GbusVIF = GbusVIF;
+
+% Others
 SaveData.KH = KH;
 SaveData.FiedlerVec = FiedlerVec;
 SaveData.Index_Vbus = Index_Vbus;
@@ -942,4 +920,4 @@ SaveData.Order_New2Old = Order_New2Old;
 SaveData.pole_T1cl = pole_T1cl;
 SaveData.pole_T12cl = pole_T12cl;
 
-save([UserData,'_Data'],'SaveData');
+save(['TestData_K\',UserData,'_Data'],'SaveData');
