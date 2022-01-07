@@ -45,18 +45,16 @@ function figo = PlotHeatMap(x,y,v,fig,range)
     end
     
     ColorStepSize = length(fig.Colormap);
+    ColorUpper0 = [1,1,0.5];    % Yellow
     ColorLower0 = [1,1,1];      % White
     ColorUpper0 = [1,0.5,0.5];  % Pink
     
     ColorLower = Affine(ColorLower0,ColorUpper0,(min(v)-range(1))/(range(2)-range(1)));
     ColorUpper = Affine(ColorLower0,ColorUpper0,(max(v)-range(1))/(range(2)-range(1)));
-%     ColorLower = Affine(ColorLower0,ColorUpper0,(0-range(1))/(range(2)-range(1)));
-%     ColorUpper = Affine(ColorLower0,ColorUpper0,(0.3-range(1))/(range(2)-range(1)));
     GradRed     = linspace(ColorLower(1),ColorUpper(1),ColorStepSize)';
     GradGreen   = linspace(ColorLower(2),ColorUpper(2),ColorStepSize)';
     GradBlue    = linspace(ColorLower(3),ColorUpper(3),ColorStepSize)';
     fig.Colormap = [GradRed GradGreen GradBlue];
-    %colormap([GradRed GradGreen GradBlue]);
     
    	figure;
     mesh(xq,yq,vq);
