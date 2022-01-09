@@ -11,7 +11,7 @@ cd(RootPath);
 ColorRGB();
 
 %% Enables
-Enable_SaveFigure = 0;
+Enable_SaveFigure = 1;
 
 %% Load data
 GammaSimData_Unstable = load('Gamma_SimData_SG_Unstable').Gamma_SimData_SG;
@@ -97,7 +97,8 @@ h1 = plot(w_us,theta_us,'LineWidth',LineWidth,'Color',RgbBlue); grid on; hold on
 h2 = plot(w_st,theta_st,'LineWidth',LineWidth,'Color',RgbRed); grid on; hold on;
 
 % Legend
-legend({'Unstable','Stable'},'interpreter','latex')
+% legend({'Unstable','Stable'},'interpreter','latex')
+legend({'Unstable','Stable'})
 
 % Settings
 xlabel('$\Delta \omega$ (pu)','interpreter','latex')

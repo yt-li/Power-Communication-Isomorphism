@@ -93,7 +93,7 @@ set(gcf,'units','normalized','outerposition',FigSize);
 
 subplot(FigRowMax,FigColumnMax,1)
 plot(Time,s_SG_abs,'LineWidth',LineWidth,'Color',LineColor{1}); grid on; hold on;
-ylabel('$S$ (pu)','interpreter','latex')
+ylabel('$|S|$ (pu)','interpreter','latex')
 xlim(t_Limit);
 xticks(t_Ticks)
 ylim(s_Limit);
@@ -101,7 +101,8 @@ yticks(s_Ticks);
 
 subplot(FigRowMax,FigColumnMax,2)
 plot(Time,abs(p_SG_int)*60,'LineWidth',LineWidth,'Color',LineColor{1}); grid on; hold on;
-xlabel('Time (s)','interpreter','latex')
+% xlabel('Time (s)','interpreter','latex')
+xlabel('Time (s)')
 ylabel('$E$ (pu)','interpreter','latex')
 xlim(t_Limit);
 xticks(t_Ticks)
@@ -120,7 +121,7 @@ subplot(FigRowMax,FigColumnMax,1)
 
 subplot(FigRowMax,FigColumnMax,1)
 plot(Time,s_IBR_abs,'LineWidth',LineWidth,'Color',LineColor{2}); grid on; hold on;
-ylabel('$S$ (pu)','interpreter','latex')
+ylabel('$|S|$ (pu)','interpreter','latex')
 xlim(t_Limit);
 xticks(t_Ticks)
 ylim(s_Limit);
@@ -128,7 +129,8 @@ yticks(s_Ticks);
 
 subplot(FigRowMax,FigColumnMax,2)
 plot(Time,abs(p_IBR_int)*60,'LineWidth',LineWidth,'Color',LineColor{2}); grid on; hold on;
-xlabel('Time (s)','interpreter','latex')
+% xlabel('Time (s)','interpreter','latex')
+xlabel('Time (s)')
 ylabel('$E$ (pu)','interpreter','latex')
 xlim(t_Limit);
 xticks(t_Ticks)

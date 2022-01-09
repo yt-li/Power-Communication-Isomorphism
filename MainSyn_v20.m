@@ -9,6 +9,9 @@
 % example, a pure IBR system without passive loads. Another example is when
 % combing the flux inductor into the network lines and update the voltage
 % values at voltage nodes.
+%
+% The generator and inverter are modelled in generator convention in the
+% paper.
 
 %% Prepare
 clear all
@@ -34,13 +37,17 @@ ColorRGB();
 % UserData = 'Gamma_SingleSgInfiniteBus_ForSim';
 
 % K analysis
-% UserData = 'K_68Bus_IBR';
+% UserData = 'K_68Bus_IBR_Load';
+UserData = 'K_68Bus_IBR';
 % UserData = 'K_68Bus_IBR_17';
 % UserData = 'K_68Bus_IBR_17_14';
 % UserData = 'K_68Bus_IBR_17_14_7';
 
+% Basic case
+% UserData = 'K_68Bus_IBR_NoLineResistance';
+
 %% Compare toolbox with nature
-Enable_ComparisonToolbox   = 0;         % 1/0: Compare the toolbox with nature
+Enable_ComparisonToolbox = 0;           % 1/0: Compare the toolbox with nature
                                         % This enable value will also be used later when plotting
                                         % Notes:
                                         % The LPF of PLL will influence the comparison a lot
@@ -53,6 +60,8 @@ if Enable_ComparisonToolbox
 end
 
 %% Enable settings
+Enable_SaveData                 = 1;
+
 % For testing participation analysis
 Enable_FiedlerAbs               = 1;
 Enable_NoneZeroXi               = 0;
@@ -920,4 +929,6 @@ SaveData.Order_New2Old = Order_New2Old;
 SaveData.pole_T1cl = pole_T1cl;
 SaveData.pole_T12cl = pole_T12cl;
 
+if Enable_SaveData
 save(['TestData_K\',UserData,'_Data'],'SaveData');
+end

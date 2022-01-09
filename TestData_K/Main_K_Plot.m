@@ -13,19 +13,16 @@ Enable_SaveFigure           = 1;
 Enable_NonZeroXi            = 0;
 Enable_ClearNodeNumber      = 0;
 Enable_ParticipationColor   = 0;
-Enable_NodeImpedanceColor   = 1;
+Enable_NodeImpedanceColor   = 0;
 
-FiedlerMax = 
+FiedlerAbsMax = 0.7;
 
 %% Load data
-% DataName = 'K_68Bus_SG_IBR_Load_Data';
-% DataName = 'K_68Bus_SG_IBR_Data';
-% DataName = 'K_68Bus_SG_IBR_17_Data';
-
+% DataName = 'K_68Bus_IBR_Load_Data';
 % DataName = 'K_68Bus_IBR_Data';
-DataName = 'K_68Bus_IBR_17_Data';
+% DataName = 'K_68Bus_IBR_17_Data';
 % DataName = 'K_68Bus_IBR_17_14_Data';
-% DataName = 'K_68Bus_IBR_17_14_7_Data';
+DataName = 'K_68Bus_IBR_17_14_7_Data';
 
 Data = load(DataName).SaveData;
 
@@ -91,7 +88,6 @@ PhiLeftMin = transpose(PhiInv(Index_XiMin,:));
 FiedlerVec = PhiRightMin.*PhiLeftMin;
 FiedlerAbs = abs(FiedlerVec);
 % FiedlerAbsMax = max(FiedlerAbs);
-FiedlerAbsMax = 0.7;                                            % Important!
 FiedlerAbsMax = max([max(FiedlerAbs),FiedlerAbsMax]);
 FiedlerAbsNorm = FiedlerAbs/FiedlerAbsMax;
 
@@ -109,7 +105,7 @@ GradBlue    = linspace(ColorLower(3),ColorUpper(3),ColorStepSize)';
 % caxis([0 FiedlerAbsMax]);
 
 %% Set current node
-highlight(GraphFigure,Index_Ibus,'NodeColor',[0.7,0.7,0.7]);  % Change all current node to gray by default
+highlight(GraphFigure,Index_Ibus,'NodeColor',[0,1,0]);  % Change all current node to green by default
 
 if Enable_ParticipationColor
 ColorFactor = FiedlerAbsNorm((length(Index_Vbus)+1):end);
