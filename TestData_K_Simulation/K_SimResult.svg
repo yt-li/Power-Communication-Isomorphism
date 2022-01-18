@@ -1100,9 +1100,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.8284271"
-     inkscape:cx="138.86486"
-     inkscape:cy="144.56454"
+     inkscape:zoom="1.4142136"
+     inkscape:cx="305.17992"
+     inkscape:cy="139.67259"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -1258,7 +1258,7 @@
          id="tspan2664-8-7-3-2-6-8"
          x="29.321722"
          y="257.75107"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.29305553px;font-family:Calibri;-inkscape-font-specification:Calibri;stroke-width:0.23149033">Loss of synchronization</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.29305553px;font-family:Calibri;-inkscape-font-specification:Calibri;stroke-width:0.23149033">Loss of synchronisation</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.4, 0.1;stroke-dashoffset:0;stroke-opacity:1"
        d="m 27.592998,204.87089 v 14.48183"

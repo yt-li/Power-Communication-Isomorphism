@@ -38,8 +38,8 @@ ColorRGB();
 
 % K analysis
 % UserData = 'K_68Bus_IBR_Load';
-UserData = 'K_68Bus_IBR';
-% UserData = 'K_68Bus_IBR_17';
+% UserData = 'K_68Bus_IBR';
+UserData = 'K_68Bus_IBR_17';
 % UserData = 'K_68Bus_IBR_17_14';
 % UserData = 'K_68Bus_IBR_17_14_7';
 
@@ -60,7 +60,7 @@ if Enable_ComparisonToolbox
 end
 
 %% Enable settings
-Enable_SaveData                 = 1;
+Enable_SaveData                 = 0;
 
 % For testing participation analysis
 Enable_FiedlerAbs               = 1;
@@ -524,7 +524,10 @@ Gamma = -Gamma;    % For negative feedback
 % Notes:
 % K can be interpreted as the synchronizing torque coefficient, as dS is
 % proportional to K*dtheta. Gamma can be interpreted as the damping torque
-% coefficient, as dS is proportional to Gamma*dtheta.
+% coefficient, as dS is proportional to Gamma*dw.
+%
+% Pls be careful: The definition of K here is same to that in the paper.
+% But the definition of gamma here is different from that in the paper.
 
 %% Apparatus Matrix: T and H^{-1}
 fprintf('Calculating apparatus matrix...\n')

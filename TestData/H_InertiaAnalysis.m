@@ -34,5 +34,5 @@ ki_pll = 0;
 f_tau = 100;
 w_tau = f_tau*2*pi;
 
-H = 1/(kp*w_tau)*W0/2;
-D = 1/(kp*w_tau)*w_tau*W0; % 1/kp*W0
+H = 1/(kp_pll*w_tau)*W0/2;
+D = 1/(kp_pll*w_tau)*w_tau*W0; % 1/kp*W0

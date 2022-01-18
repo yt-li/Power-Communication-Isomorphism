@@ -1071,15 +1071,15 @@
      borderopacity="1.0"
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.8284274"
-     inkscape:cx="261.94906"
-     inkscape:cy="217.19806"
+     inkscape:zoom="1.4142137"
+     inkscape:cx="341.47888"
+     inkscape:cy="224.83328"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="5120"
-     inkscape:window-height="2035"
-     inkscape:window-x="5107"
+     inkscape:window-width="2560"
+     inkscape:window-height="1315"
+     inkscape:window-x="-13"
      inkscape:window-y="-13"
      inkscape:window-maximized="1" />
   <metadata
@@ -1181,7 +1181,7 @@
          id="tspan2664-8-7-3-2-6"
          x="6.3142824"
          y="206.7459"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.29305553px;font-family:Calibri;-inkscape-font-specification:Calibri;stroke-width:0.23149033">Converter colored by its participation in the critical mode</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.29305553px;font-family:Calibri;-inkscape-font-specification:Calibri;stroke-width:0.23149033">Converter coloured by its participation in the critical mode</tspan></text>
     <rect
        style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.15000001;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="rect1714"
@@ -1610,7 +1610,7 @@
        sodipodi:nodetypes="cc" />
     <path
        style="fill:none;stroke:#ff0000;stroke-width:0.30000001;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow2Send)"
-       d="m 93.975389,275.41767 -0.998217,1.13681 h 1.496635 l -1.384709,1.22442"
+       d="m 94.080627,276.08417 -0.998217,1.13681 h 1.496635 l -1.384709,1.22442"
        id="path6899"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cccc" />
@@ -1641,7 +1641,7 @@
          id="tspan2664-8-7-4-5-3-7-4-2-3-4-2-7"
          x="63.088814"
          y="294.9256"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.29305553px;font-family:Calibri;-inkscape-font-specification:Calibri;fill:#000000;fill-opacity:1;stroke-width:0.23149033">Loss of synchronization after fault</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.29305553px;font-family:Calibri;-inkscape-font-specification:Calibri;fill:#000000;fill-opacity:1;stroke-width:0.23149033">Loss of synchronisation after fault</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:9.25961304px;line-height:1.25;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.23149033"
@@ -1672,7 +1672,7 @@
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.44992828px;font-family:Calibri;-inkscape-font-specification:Calibri;stroke-width:0.2419872">(a) </tspan></text>
     <g
        id="g4237"
-       transform="matrix(1.1,0,0,1.1,-7.7203796,-20.460387)">
+       transform="matrix(1.1,0,0,1.1,-7.7203796,-22.577055)">
       <text
          id="text2666-5-0-4-6-9-3-5-0-8-3"
          y="189.22427"
@@ -1749,7 +1749,7 @@
     </g>
     <g
        id="g4252"
-       transform="matrix(1.1,0,0,1.1,-7.5540649,-20.19619)">
+       transform="matrix(1.1,0,0,1.1,-7.5540649,-22.312858)">
       <g
          transform="translate(21.451115,34.892033)"
          id="g3552">
@@ -1811,7 +1811,7 @@
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.29305553px;font-family:Calibri;-inkscape-font-specification:Calibri;fill:#000000;fill-opacity:1;stroke-width:0.23149033"
            y="188.79973"
            x="131.47385"
-           sodipodi:role="line">Capacitive Thevenin impedance</tspan></text>
+           sodipodi:role="line">Capacitive-Inductive Thevenin impedance</tspan></text>
       <text
          id="text2666-5-0-4-6-9-3-5-0-8-3-95-8"
          y="195.49133"
@@ -1826,7 +1826,7 @@
     </g>
     <g
        id="g4190"
-       transform="matrix(1.1,0,0,1.1,-2.0514007,-24.327164)">
+       transform="matrix(1.1,0,0,1.1,-2.0514007,-26.443832)">
       <g
          transform="translate(-127.28434,91.392806)"
          id="g3562">
@@ -1903,7 +1903,7 @@
     </g>
     <g
        id="g4207"
-       transform="matrix(1.1,0,0,1.1,-8.2883824,-23.828415)">
+       transform="matrix(1.1,0,0,1.1,-8.2883824,-25.945083)">
       <text
          id="text2666-5-0-4-6-9-3-5-0-8-3-95-8-0-0"
          y="251.23715"
@@ -1991,7 +1991,7 @@
     </g>
     <g
        id="g4222"
-       transform="matrix(1.1,0,0,1.1,-10.236091,-25.39224)">
+       transform="matrix(1.1,0,0,1.1,-10.236091,-27.508908)">
       <text
          id="text2666-5-0-4-6-9-3-5-0-8-3-4-4-4-3"
          y="246.14847"
