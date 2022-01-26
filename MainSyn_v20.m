@@ -26,6 +26,7 @@ addpath(genpath([RootPath,'/Functions']));
 addpath(genpath([RootPath,'/TestData']));
 addpath(genpath([RootPath,'/TestData_K']));
 addpath(genpath([RootPath,'/TestData_K_Simulation']));
+addpath(genpath([RootPath,'/TestData_TwoInverterCase']));
 
 %% Get color RGB
 ColorRGB();
@@ -39,12 +40,15 @@ ColorRGB();
 % K analysis
 % UserData = 'K_68Bus_IBR_Load';
 % UserData = 'K_68Bus_IBR';
-UserData = 'K_68Bus_IBR_17';
+% UserData = 'K_68Bus_IBR_17';
 % UserData = 'K_68Bus_IBR_17_14';
 % UserData = 'K_68Bus_IBR_17_14_7';
 
 % Basic case
 % UserData = 'K_68Bus_IBR_NoLineResistance';
+
+% For inertia
+UserData = '2Bus_SG_IBR';
 
 %% Compare toolbox with nature
 Enable_ComparisonToolbox = 0;           % 1/0: Compare the toolbox with nature
