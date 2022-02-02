@@ -7,11 +7,11 @@ Time = out.Data_App1{6}.Values.Time;
 
 Fbus = [19,22,30,31,32,34,35,37,38,43,54,57,58,62,63,65,66];
 
-% NumRef = 17;
-% NumBus = 68;
+NumRef = 17;
+NumBus = 68;
 
-NumRef = 1;
-NumBus = 16;
+% NumRef = 1;
+% NumBus = 16;
 
 Enable_17InfBus = 0;
 
@@ -60,13 +60,13 @@ for i = 1:NumBus
     if isempty(find(Fbus == i,1))
         subplot(2,1,1)
         plot(Time,dtheta{i}); hold on; grid on;
-        xlim([0.2,4]);
+        xlim([0.2,4.5]);
         ylabel('Angle (rad)');
         xlabel('Time (s)');
         subplot(2,1,2)
         plot(Time,vm{i}); hold on; grid on;
         %ylim([0,1.5]);
-        xlim([0.2,4]);
+        xlim([0.2,4.5]);
         ylabel('Voltage (pu)')
         xlabel('Time (s)')
     end

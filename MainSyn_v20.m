@@ -41,14 +41,14 @@ ColorRGB();
 % UserData = 'K_68Bus_IBR_Load';
 % UserData = 'K_68Bus_IBR';
 % UserData = 'K_68Bus_IBR_17';
-% UserData = 'K_68Bus_IBR_17_14';
+UserData = 'K_68Bus_IBR_17_14';
 % UserData = 'K_68Bus_IBR_17_14_7';
 
 % Basic case
 % UserData = 'K_68Bus_IBR_NoLineResistance';
 
 % For inertia
-UserData = '2Bus_SG_IBR';
+% UserData = '2Bus_SG_IBR';
 
 %% Compare toolbox with nature
 Enable_ComparisonToolbox = 0;           % 1/0: Compare the toolbox with nature
