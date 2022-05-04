@@ -2,6 +2,11 @@ clear all
 clc
 close all
 
+%%
+enable_save = 0;
+
+%%
+
 s = tf('s');
 
 F0 = 60;
@@ -47,7 +52,9 @@ pole_f = pole_w/2/pi;
 pole_pu = pole_f/F0;
 figure(1)
 scatter(real(pole_pu),imag(pole_pu),'x','LineWidth',1.5); hold on; grid on;
+if enable_save
 save('H_pole_pu','pole_pu');
+end
 
 %% Calculate bandwidth for current node
 for k = 1:length(pole_w)
@@ -73,7 +80,9 @@ for k = 1:length(w_i)
     pole_pu{k} = pole_f{k}/F0;
 end
 
+if enable_save
 save('H_pole_pu_sweep','pole_pu');
+end
 
 figure(2)
 for k = 1:length(w_i)
