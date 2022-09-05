@@ -1,8 +1,6 @@
 # Power Communication Isomorphism
 
-This repository contains the data for the following paper:
-
-Yunjie Gu, Yitong Li, Timothy C. Green, ``The Nature of Synchronization in Power Systems: Insights from Communication Theory,'' arXiv.
+This repository contains the data for the power communication isomorphism.
 
 ## Contact
 
