@@ -53,6 +53,9 @@ ColorRGB();
 % For inertia
 % UserData = '2Bus_SG_IBR';
 
+% For GFM
+UserData = 'K_68Bus_GFM';
+
 %% Compare toolbox with nature
 Enable_ComparisonToolbox = 1;           % 1/0: Compare the toolbox with nature
                                         % This enable value will also be used later when plotting
@@ -866,6 +869,9 @@ else
     pole_T1cl = pole(T1cl)/2/pi;
     pole_T12cl = pole(T12cl)/2/pi;
 end
+
+save('pole_T1cl.mat','pole_T1cl');
+save('pole_T12cl.mat','pole_T12cl');
 
 %% Plot
 fprintf('Plotting...\n')
